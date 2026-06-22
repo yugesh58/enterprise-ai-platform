@@ -1,5 +1,5 @@
 from app.agents.analyst_agent import analyst_agent_query
-from app.services.panda_generator import generate_panda_query
+from backend.app.services.pandas_generator import generate_panda_query
 from app.services.pandas_executor import execute_pandas_query
 
 result=analyst_agent_query()

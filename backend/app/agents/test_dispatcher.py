@@ -1,13 +1,10 @@
+# app/agents/test_dispatcher.py
+
 from app.agents.agent_dispatcher import dispatch_agent
-from app.services.router import route_question
 
-question = "show all employees"
-
-agent = route_question(question)
-
-result = dispatch_agent(
-    agent,
-    question
+response = dispatch_agent(
+    "ANALYST_AGENT",
+    "Which region has highest profit?"
 )
 
-print(result)
+print(response)
