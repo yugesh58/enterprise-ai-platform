@@ -25,5 +25,5 @@ def analyst_agent_query(question):
         "generated_code": pandas_code,
         "summary": summary,
         "chart_path": chart_path,
-        "result": result
+        "result": str(result)
     }
