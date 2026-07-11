@@ -13,4 +13,4 @@ class AgentRequest:
 
     uploaded_files: list[Any] = field(default_factory=list)
 
-    metadata: dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
