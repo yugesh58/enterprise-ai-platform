@@ -1,9 +1,9 @@
 from typing_extensions import TypedDict
-from app.memory.conversation_memory import(get_memory, add_to_memory)
-from app.services.result_summarizer import summarize_result
-from app.services.sql_generator import generate_sql
-from app.database.query_executor import run_query
-from app.database.schema_retriever import get_schema
+from app.storage.memory.conversation_memory import(get_memory, add_to_memory)
+from app.workflows.sql.summarizer import summarize_result
+from app.workflows.sql.generator import generate_sql
+from app.storage.database.query_executor import run_query
+from app.storage.database.schema_retriever import get_schema
 from langgraph.graph import StateGraph, START, END
 
 class SQLState(TypedDict):
@@ -121,7 +121,7 @@ Rules:
 Corrected SQL:
 """
 
-    from app.services.llm import llm
+    from app.ai.llm import llm
 
     response = llm.invoke(retry_prompt)
 

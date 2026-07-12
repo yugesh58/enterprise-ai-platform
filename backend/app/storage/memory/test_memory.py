@@ -1,4 +1,4 @@
-from app.memory.conversation_memory import(get_memory, add_to_memory)
+from app.storage.memory.conversation_memory import(get_memory, add_to_memory)
 
 add_to_memory(
     "Show all employees",

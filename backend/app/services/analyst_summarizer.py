@@ -1,4 +1,4 @@
-from app.services.llm import llm
+from app.ai.llm import llm
 
 def analyst_summarizer(question,result):
     ANALYST_SUMMARIZER_PROMPT=f"""

@@ -11,6 +11,11 @@ class Settings(BaseSettings):
 
     DEBUG: bool = True
 
+    LLM_PROVIDER: str = "openai"
+
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4.1-mini"
+
     AZURE_OPENAI_ENDPOINT: str = ""
 
     AZURE_OPENAI_API_KEY: str = ""

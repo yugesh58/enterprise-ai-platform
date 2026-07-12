@@ -1,4 +1,4 @@
-from app.services.llm import llm
+from app.ai.llm import llm
 from app.prompts.router_prompt import ROUTER_PROMPT
 
 

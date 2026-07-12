@@ -2,7 +2,7 @@ from app.agents.base_agent import BaseAgent
 from app.contracts.agent_request import AgentRequest
 from app.contracts.agent_response import AgentResponse
 
-from app.graphs.sql_graph import sql_graph
+from app.workflows.sql.graph import sql_graph
 
 
 class SQLAgent(BaseAgent):

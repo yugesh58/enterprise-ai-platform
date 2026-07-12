@@ -1,5 +1,5 @@
 from sqlalchemy import text
-from app.database.connection import engine
+from app.storage.database.connection import engine
 
 
 def run_query(query: str):

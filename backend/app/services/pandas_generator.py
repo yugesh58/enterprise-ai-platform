@@ -1,5 +1,5 @@
 from app.prompts.analyst_prompt import ANALYST_SYSTEM_PROMPT
-from app.services.llm import llm
+from app.ai.llm import llm
 
 def generate_pandas_query(question:str,columns:list):
     SYSTEM_PROMPT=f"""

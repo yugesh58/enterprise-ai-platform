@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from app.graphs.sql_graph import sql_graph
-from app.memory.conversation_memory import get_memory
+from app.workflows.sql.graph import sql_graph
+from app.storage.memory.conversation_memory import get_memory
 
 router = APIRouter()
 

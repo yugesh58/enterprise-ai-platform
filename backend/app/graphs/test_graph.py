@@ -1,4 +1,4 @@
-from app.graphs.sql_graph import sql_graph
+from app.workflows.sql.graph import sql_graph
 
 
 result = sql_graph.invoke(

@@ -1,5 +1,5 @@
 from sqlalchemy import inspect
-from app.database.connection import engine
+from app.storage.database.connection import engine
 
 def get_schema():
     inspector=inspect(engine)

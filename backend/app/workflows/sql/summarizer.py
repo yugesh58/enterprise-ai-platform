@@ -1,4 +1,4 @@
-from app.services.llm import llm
+from app.ai.llm import llm
 
 def summarize_result(question:str, result:list):
     prompt=f"""
