@@ -1,6 +1,6 @@
 from app.loaders.pdf_loader import load_pdf
 from app.services.chunker import create_chunks
-from app.vectorstore.faiss_manager import create_vectorstore,retrieve_chunk
+from app.storage.vectorstore.faiss_manager import create_vectorstore,retrieve_chunk
 from app.services.rag_service import generate_rag_answer
 
 text = load_pdf(

@@ -1,7 +1,7 @@
 from app.loaders.pdf_loader import load_pdf
 from app.services.chunker import create_chunks
-from app.vectorstore.document_builder import document_builder
-from app.vectorstore.faiss_manager import create_vectorstore,retrieve_chunk,save_vectorstore
+from app.storage.vectorstore.document_builder import document_builder
+from app.storage.vectorstore.faiss_manager import create_vectorstore,retrieve_chunk,save_vectorstore
 
 text = load_pdf(
     "app/uploads/Leave-Policy.pdf"

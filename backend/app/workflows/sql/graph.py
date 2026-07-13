@@ -121,9 +121,9 @@ Rules:
 Corrected SQL:
 """
 
-    from app.ai.llm import llm
+    from app.ai.llm import provider
 
-    response = llm.invoke(retry_prompt)
+    response = provider.invoke(retry_prompt)
 
     sql_query = response.content.strip()
 

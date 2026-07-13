@@ -1,4 +1,4 @@
-from app.ai.llm import llm
+from app.ai.llm import provider
 
 def summarize_result(question:str, result:list):
     prompt=f"""
@@ -22,6 +22,6 @@ def summarize_result(question:str, result:list):
     Provide a concise summary based strictly on the result.
 
     """
-    response=llm.invoke(prompt)
+    response=provider.invoke(prompt)
 
     return response.content.strip()

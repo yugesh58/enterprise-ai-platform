@@ -1,4 +1,4 @@
-from app.ai.llm import llm
+from app.ai.llm import provider
 
 
 def generate_rag_answer(
@@ -34,7 +34,7 @@ def generate_rag_answer(
     "I could not find that information in the uploaded documents."
     """
 
-    response = llm.invoke(prompt)
+    response = provider.invoke(prompt)
 
     return {
         "answer": response.content,

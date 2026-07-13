@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "sqlite:///./enterprise.db"
 
-    VECTOR_DB_PATH: str = "./app/vectorstore/faiss_index"
+    VECTOR_DB_PATH: str  = "./app/storage/vectorstore/faiss_index"
 
     LOG_LEVEL: str = "INFO"
 

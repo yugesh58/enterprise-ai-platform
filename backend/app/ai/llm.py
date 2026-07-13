@@ -1,10 +1,5 @@
-from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
-import os
+from app.ai.factory import LLMFactory
 
-load_dotenv()
 
-llm = ChatOpenAI(
-    model=os.getenv("MODEL_NAME"),
-    temperature=0
-)
+provider = LLMFactory.get_provider()
+

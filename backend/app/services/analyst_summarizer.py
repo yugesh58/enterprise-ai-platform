@@ -1,4 +1,4 @@
-from app.ai.llm import llm
+from app.ai.llm import provider
 
 def analyst_summarizer(question,result):
     ANALYST_SUMMARIZER_PROMPT=f"""
@@ -12,6 +12,6 @@ def analyst_summarizer(question,result):
 
     summarize the result and do not add an other information
     """
-    summary=llm.invoke(ANALYST_SUMMARIZER_PROMPT)
+    summary=provider.invoke(ANALYST_SUMMARIZER_PROMPT)
 
     return summary.content.strip()

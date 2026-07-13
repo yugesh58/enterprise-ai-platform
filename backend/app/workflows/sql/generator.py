@@ -1,4 +1,4 @@
-from app.ai.llm import llm
+from app.ai.llm import provider
 from app.prompts.sql_prompt import SQL_SYSTEM_PROMPT
 
 
@@ -59,7 +59,7 @@ Instructions:
 5. Return ONLY SQL.
 """
 
-    response = llm.invoke(prompt)
+    response = provider.invoke(prompt)
 
     sql_query = response.content.strip()
 

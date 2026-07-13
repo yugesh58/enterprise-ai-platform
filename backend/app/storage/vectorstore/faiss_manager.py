@@ -1,10 +1,11 @@
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from dotenv import load_dotenv
+
+from app.core.config import settings
+
+FAISS_PATH = settings.VECTOR_DB_PATH
 
 
-load_dotenv()
-FAISS_PATH = "app/vectorstore/faiss_index"
 
 def create_vectorstore(documents):
     embeddings=OpenAIEmbeddings(
