@@ -3,7 +3,7 @@
 from app.agents.agent_dispatcher import dispatch_agent
 
 response = dispatch_agent(
-    "ANALYST_AGENT",
+    "analyst",
     "Which region has highest profit?"
 )
 

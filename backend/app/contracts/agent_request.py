@@ -1,13 +1,18 @@
-from dataclasses import dataclass,field
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.core.request_context import RequestContext
 
-@dataclass
+
+@dataclass(slots=True)
 class AgentRequest:
+    """
+    Represents an incoming request passed to an agent.
+    """
+
     question: str
 
-    context: RequestContext=field(default_factory=RequestContext)
+    context: RequestContext = field(default_factory=RequestContext)
 
     chat_history: list[str] = field(default_factory=list)
 

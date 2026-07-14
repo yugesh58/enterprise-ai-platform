@@ -1,14 +1,43 @@
-class AgentExecutionError(Exception):
+"""
+Application-specific exception hierarchy.
+"""
+
+
+class EnterpriseAIError(Exception):
+    """
+    Base exception for all application-specific errors.
+    """
+
     pass
 
 
-class ValidationError(Exception):
+class AgentExecutionError(EnterpriseAIError):
+    """
+    Raised when an agent fails during execution.
+    """
+
     pass
 
 
-class RouterError(Exception):
+class ApplicationValidationError(EnterpriseAIError):
+    """
+    Raised when validation fails.
+    """
+
     pass
 
 
-class UnauthorizedError(Exception):
+class RouterError(EnterpriseAIError):
+    """
+    Raised when the router cannot determine the appropriate agent.
+    """
+
+    pass
+
+
+class UnauthorizedError(EnterpriseAIError):
+    """
+    Raised when an unauthorized request is made.
+    """
+
     pass

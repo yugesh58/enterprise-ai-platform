@@ -20,7 +20,7 @@ class OpenAIProvider(BaseLLMProvider):
         return self._llm
 
     def invoke(self, prompt: str):
-        return self._provider.invoke(prompt)
+        return self._llm.invoke(prompt)
 
     def stream(self, prompt: str):
         return self._llm.stream(prompt)

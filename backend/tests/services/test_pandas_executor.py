@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.agents.analyst_agent import analyst_agent_query
+from app.agents.analyst import analyst_query
 from backend.app.services.pandas_generator import generate_pandas_query
 from app.services.pandas_executor import execute_pandas_query
 from app.services.analyst_summarizer import analyst_summarizer
