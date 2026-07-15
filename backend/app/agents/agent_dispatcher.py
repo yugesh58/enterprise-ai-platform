@@ -1,5 +1,7 @@
+from app.agents.base_agent import BaseAgent
 from app.agents.registry import AgentRegistry
 from app.contracts.agent_request import AgentRequest
+from app.contracts.agent_response import AgentResponse
 
 
 _registry = AgentRegistry()
@@ -8,11 +10,11 @@ _registry = AgentRegistry()
 def dispatch_agent(
     agent_name: str,
     request: AgentRequest,
-):
+) -> AgentResponse:
     """
-    Dispatches the request to the correct agent.
+    Dispatch the request to the appropriate agent.
     """
 
-    agent = _registry.get(agent_name)
+    agent: BaseAgent = _registry.get(agent_name)
 
     return agent.execute(request)

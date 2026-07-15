@@ -1,32 +1,42 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Iterator
 
 
 class BaseLLMProvider(ABC):
     """
     Base contract for every LLM provider.
 
-    Any provider (OpenAI, Azure OpenAI, Anthropic, Ollama)
-    must implement these methods.
+    Implementations include:
+    - OpenAI
+    - Azure OpenAI
+    - Anthropic
+    - Ollama
     """
 
     @abstractmethod
     def get_llm(self) -> Any:
         """
-        Return the initialized LangChain LLM instance.
+        Returns the underlying LangChain LLM instance.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
-    def invoke(self, prompt: str) -> str:
+    def invoke(self, prompt: str) -> Any:
         """
-        Invoke the model with a prompt and return the response.
+        Sends a prompt to the model and returns the response.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
-    def stream(self, prompt: str):
+    async def ainvoke(self, prompt: str) -> Any:
         """
-        Stream the model response.
+        Asynchronously invokes the model.
         """
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def stream(self, prompt: str) -> Iterator[Any]:
+        """
+        Streams the response from the model.
+        """
+        raise NotImplementedError

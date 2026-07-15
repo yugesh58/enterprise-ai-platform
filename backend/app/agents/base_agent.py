@@ -6,13 +6,22 @@ from app.core.logging import get_logger
 
 
 class BaseAgent(ABC):
+    """
+    Base contract for all AI agents.
 
-    def __init__(self):
+    Every agent receives an AgentRequest and returns
+    an AgentResponse.
+    """
+
+    def __init__(self) -> None:
         self.logger = get_logger(self.__class__.__name__)
 
     @abstractmethod
     def execute(
         self,
-        request: AgentRequest
+        request: AgentRequest,
     ) -> AgentResponse:
-        pass
+        """
+        Execute the agent.
+        """
+        raise NotImplementedError
