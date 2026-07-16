@@ -5,6 +5,7 @@ from app.workflows.sql.generator import generate_sql
 from app.storage.database.query_executor import run_query
 from app.storage.database.schema_retriever import get_schema
 from langgraph.graph import StateGraph, START, END
+from app.workflows.sql.nodes.schema import retrieve_schema_node
 
 class SQLState(TypedDict):
     question: str
@@ -16,11 +17,6 @@ class SQLState(TypedDict):
     validation_reason: str
     retry_count: int
     result: list
-
-def retrieve_schema_node(state: SQLState):
-    schema=get_schema()
-
-    return {"schema":schema}
 
 def memory_retriever_node(state:SQLState):
     memory=get_memory()

@@ -1,5 +1,5 @@
 from app.ai.providers.base_provider import BaseLLMProvider
-from app.ai.registry import LLM_PROVIDER_REGISTRY
+from app.ai.llm_registry import LLM_PROVIDER_REGISTRY
 from app.core.config import settings
 from app.core.enums import LLMProvider
 

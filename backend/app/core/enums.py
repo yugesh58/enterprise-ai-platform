@@ -10,6 +10,9 @@ class AgentType(StrEnum):
     RAG = "rag"
     ANALYST = "analyst"
 
+class LLMProvider(StrEnum):
+    OPENAI = "openai"
+    AZURE = "azure"
 
 class ResponseStatus(StrEnum):
     """

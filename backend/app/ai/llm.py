@@ -6,6 +6,6 @@ from this module instead of instantiating providers
 directly.
 """
 
-from app.ai.factory import LLMFactory
+from app.ai.llm_factory import LLMFactory
 
 provider = LLMFactory.get_provider()
