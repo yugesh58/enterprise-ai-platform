@@ -3,12 +3,7 @@ from app.contracts.agent_request import AgentRequest
 from app.contracts.agent_response import AgentResponse
 from app.core.enums import AgentType
 
-from app.storage.vectorstore.faiss_manager import (
-    load_vectorstore,
-    retrieve_chunk,
-)
-
-from app.services.rag_service import generate_rag_answer
+from app.workflows.rag.graph import rag_graph
 
 
 class RAGAgent(BaseAgent):
@@ -24,16 +19,10 @@ class RAGAgent(BaseAgent):
 
         self.logger.info("Executing RAG Agent")
 
-        vectorstore = load_vectorstore()
-
-        documents = retrieve_chunk(
-            vectorstore,
-            request.question,
-        )
-
-        answer = generate_rag_answer(
-            documents,
-            request.question,
+        graph_response = rag_graph.invoke(
+            {
+                "question": request.question,
+            }
         )
 
         request.context.selected_agent = AgentType.RAG
@@ -41,8 +30,6 @@ class RAGAgent(BaseAgent):
         self.logger.info("RAG Agent execution completed")
 
         return AgentResponse(
-            answer=answer,
-            data={
-                "documents": documents,
-            },
+            answer=graph_response["answer"],
+            data=graph_response,
         )
