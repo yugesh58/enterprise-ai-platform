@@ -1,188 +1,51 @@
-from typing_extensions import TypedDict
-from app.storage.memory.conversation_memory import(get_memory, add_to_memory)
-from app.workflows.sql.summarizer import summarize_result
-from app.workflows.sql.generator import generate_sql
-from app.storage.database.query_executor import run_query
-from app.storage.database.schema_retriever import get_schema
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
+
+from app.workflows.sql.state import SQLState
+
+from app.workflows.sql.nodes.memory import retrieve_memory_node
 from app.workflows.sql.nodes.schema import retrieve_schema_node
-
-class SQLState(TypedDict):
-    question: str
-    memory:list
-    summary:str
-    schema: str
-    sql_query: str
-    validation_status: str
-    validation_reason: str
-    retry_count: int
-    result: list
-
-def memory_retriever_node(state:SQLState):
-    memory=get_memory()
-    return{"memory":memory}
-
-def summarize_result_node(state:SQLState):
-    summary=summarize_result(state["question"],state["result"])
-    return{"summary":summary}
-
-def memory_update_node(state:SQLState):
-    add_to_memory(state["question"],state["sql_query"],state["summary"])
-    return{}
-
-def sql_generation_node(state:SQLState):
-    question=state['question']
-    schema=state["schema"]
-    memory=state["memory"]
-    sql_query=generate_sql(question, schema, memory)
-
-    return {"sql_query": sql_query }
-
-def validate_sql_node(state: SQLState):
-
-    sql_query = state["sql_query"].strip()
-
-    # Multiple SQL statements
-    if ";" in sql_query[:-1]:
-
-        return {
-            "validation_status": "invalid",
-            "validation_reason": "Multiple SQL statements detected."
-        }
-
-    dangerous_keywords = [
-        "DROP",
-        "DELETE",
-        "TRUNCATE",
-        "UPDATE",
-        "ALTER",
-        "INSERT"
-    ]
-
-    sql_upper = sql_query.upper()
-
-    for keyword in dangerous_keywords:
-
-        if keyword in sql_upper:
-
-            return {
-                "validation_status": "invalid",
-                "validation_reason": f"{keyword} statements are not allowed."
-            }
-
-    if not sql_upper.startswith("SELECT"):
-
-        return {
-            "validation_status": "invalid",
-            "validation_reason": "Only SELECT statements are allowed."
-        }
-
-    return {
-        "validation_status": "valid",
-        "validation_reason": ""
-    }
+from app.workflows.sql.nodes.generate_sql import generate_sql_node
+from app.workflows.sql.nodes.validate_sql import (
+    validate_sql_node,
+    validation_router,
+)
+from app.workflows.sql.nodes.retry import regenerate_sql_node
+from app.workflows.sql.nodes.execute_sql import execute_sql_node
+from app.workflows.sql.nodes.summarize import summarize_node
+from app.workflows.sql.nodes.update_memory import update_memory_node
 
 
-def regenrate_sql_node(state: SQLState):
+graph_builder = StateGraph(SQLState)
 
-    question = state["question"]
-    schema = state["schema"]
-    memory = state["memory"]
-    validation_reason = state["validation_reason"]
+# Nodes
+graph_builder.add_node("memory", retrieve_memory_node)
+graph_builder.add_node("schema", retrieve_schema_node)
+graph_builder.add_node("generate_sql", generate_sql_node)
+graph_builder.add_node("validate_sql", validate_sql_node)
+graph_builder.add_node("retry_sql", regenerate_sql_node)
+graph_builder.add_node("execute_sql", execute_sql_node)
+graph_builder.add_node("summarize", summarize_node)
+graph_builder.add_node("update_memory", update_memory_node)
 
-    retry_prompt = f"""
-    The previous SQL query was rejected.
+# Edges
+graph_builder.add_edge(START, "memory")
+graph_builder.add_edge("memory", "schema")
+graph_builder.add_edge("schema", "generate_sql")
+graph_builder.add_edge("generate_sql", "validate_sql")
+graph_builder.add_edge("retry_sql", "validate_sql")
+graph_builder.add_edge("execute_sql", "summarize")
+graph_builder.add_edge("summarize", "update_memory")
+graph_builder.add_edge("update_memory", END)
 
-Reason:
-{validation_reason}
-
-Database Schema:
-{schema}
-
-Conversation History:
-{memory}
-
-User Question:
-{question}
-
-Rules:
-1. Generate ONLY SQLite SELECT statements.
-2. Do NOT use DELETE.
-3. Do NOT use DROP.
-4. Do NOT use UPDATE.
-5. Do NOT use INSERT.
-6. Do NOT use ALTER.
-7. Return ONLY SQL.
-
-Corrected SQL:
-"""
-
-    from app.ai.llm import provider
-
-    response = provider.invoke(retry_prompt)
-
-    sql_query = response.content.strip()
-
-    sql_query = sql_query.replace("```sql", "")
-    sql_query = sql_query.replace("```", "")
-
-    retry_count = state.get("retry_count", 0) + 1
-
-    return {
-        "sql_query": sql_query.strip(),
-        "retry_count": retry_count
-    }
-
-def validation_router(state: SQLState):
-
-    if state["validation_status"] == "valid":
-        return "execute_sql"
-
-    if state.get("retry_count", 0) < 2:
-        return "retry_sql"
-
-    return "end"
-
-def query_executor_node(state:SQLState):
-    sql_query=state['sql_query']
-    result=run_query(sql_query)
-
-    return{"result":result}
-
-
-graph_builder=StateGraph(SQLState)
-
-
-#nodes
-graph_builder.add_node("generate_sql",sql_generation_node)
-graph_builder.add_node("memory_retriever_node",memory_retriever_node)
-graph_builder.add_node("summarize_result_node",summarize_result_node)
-graph_builder.add_node("memory_update_node",memory_update_node)
-graph_builder.add_node("validate_sql",validate_sql_node)
-graph_builder.add_node("execute_sql",query_executor_node)
-graph_builder.add_node("retry_sql",regenrate_sql_node)
-graph_builder.add_node("schema_node",retrieve_schema_node)
-
-
-#edges
+# Conditional Routing
 graph_builder.add_conditional_edges(
     "validate_sql",
     validation_router,
     {
         "execute_sql": "execute_sql",
-        "retry_sql":"retry_sql",
-        "end": END
-    }
+        "retry_sql": "retry_sql",
+        "end": END,
+    },
 )
 
-
-graph_builder.add_edge(START,"memory_retriever_node")
-graph_builder.add_edge("memory_retriever_node","schema_node")
-graph_builder.add_edge("schema_node","generate_sql")
-graph_builder.add_edge("generate_sql","validate_sql")
-graph_builder.add_edge("retry_sql","validate_sql")
-graph_builder.add_edge("execute_sql","summarize_result_node")
-graph_builder.add_edge("summarize_result_node","memory_update_node")
-graph_builder.add_edge("memory_update_node",END)
-
-sql_graph=graph_builder.compile()
+sql_graph = graph_builder.compile()

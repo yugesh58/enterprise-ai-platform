@@ -21,3 +21,7 @@ class ResponseStatus(StrEnum):
 
     SUCCESS = "success"
     FAILED = "failed"
+
+class ValidationStatus(StrEnum):
+    VALID = "valid"
+    INVALID = "invalid"
