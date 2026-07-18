@@ -2,12 +2,10 @@ from app.agents.base_agent import BaseAgent
 from app.contracts.agent_request import AgentRequest
 from app.contracts.agent_response import AgentResponse
 from app.core.enums import AgentType
-
 from app.workflows.analyst.graph import analyst_graph
 
 
 class AnalystAgent(BaseAgent):
-
     def execute(
         self,
         request: AgentRequest,
@@ -23,11 +21,9 @@ class AnalystAgent(BaseAgent):
 
         request.context.selected_agent = AgentType.ANALYST
 
-        self.logger.info(
-            "Analyst Agent execution completed"
-        )
+        self.logger.info("Analyst Agent execution completed")
 
         return AgentResponse(
             answer=graph_response["summary"],
-            data=graph_response,
+            chart=graph_response.get("chart_path"),
         )

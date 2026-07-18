@@ -3,7 +3,6 @@ from app.agents.registry import AgentRegistry
 from app.contracts.agent_request import AgentRequest
 from app.contracts.agent_response import AgentResponse
 
-
 _registry = AgentRegistry()
 
 

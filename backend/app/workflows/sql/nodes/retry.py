@@ -40,12 +40,7 @@ Corrected SQL:
 
     response = provider.invoke(retry_prompt)
 
-    sql_query = (
-        response.content
-        .replace("```sql", "")
-        .replace("```", "")
-        .strip()
-    )
+    sql_query = response.content.replace("```sql", "").replace("```", "").strip()
 
     return {
         "sql_query": sql_query,

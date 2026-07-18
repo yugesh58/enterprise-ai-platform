@@ -1,19 +1,17 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.workflows.sql.state import SQLState
-
-from app.workflows.sql.nodes.memory import retrieve_memory_node
-from app.workflows.sql.nodes.schema import retrieve_schema_node
+from app.workflows.sql.nodes.execute_sql import execute_sql_node
 from app.workflows.sql.nodes.generate_sql import generate_sql_node
+from app.workflows.sql.nodes.memory import retrieve_memory_node
+from app.workflows.sql.nodes.retry import regenerate_sql_node
+from app.workflows.sql.nodes.schema import retrieve_schema_node
+from app.workflows.sql.nodes.summarize import summarize_node
+from app.workflows.sql.nodes.update_memory import update_memory_node
 from app.workflows.sql.nodes.validate_sql import (
     validate_sql_node,
     validation_router,
 )
-from app.workflows.sql.nodes.retry import regenerate_sql_node
-from app.workflows.sql.nodes.execute_sql import execute_sql_node
-from app.workflows.sql.nodes.summarize import summarize_node
-from app.workflows.sql.nodes.update_memory import update_memory_node
-
+from app.workflows.sql.state import SQLState
 
 graph_builder = StateGraph(SQLState)
 

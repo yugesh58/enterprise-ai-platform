@@ -25,8 +25,6 @@ class AgentRegistry:
         """
 
         if name not in self._agents:
-            raise ValueError(
-                f"Unknown agent: {name}"
-            )
+            raise ValueError(f"Unknown agent: {name}")
 
         return self._agents[name]

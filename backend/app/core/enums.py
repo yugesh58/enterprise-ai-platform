@@ -10,9 +10,11 @@ class AgentType(StrEnum):
     RAG = "rag"
     ANALYST = "analyst"
 
+
 class LLMProvider(StrEnum):
     OPENAI = "openai"
     AZURE = "azure"
+
 
 class ResponseStatus(StrEnum):
     """
@@ -21,6 +23,7 @@ class ResponseStatus(StrEnum):
 
     SUCCESS = "success"
     FAILED = "failed"
+
 
 class ValidationStatus(StrEnum):
     VALID = "valid"

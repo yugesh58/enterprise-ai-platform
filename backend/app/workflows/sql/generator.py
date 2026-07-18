@@ -2,25 +2,19 @@ from app.ai.llm import provider
 from app.prompts.sql_prompt import SQL_SYSTEM_PROMPT
 
 
-
-def generate_sql(
-    user_question: str,
-    schema: str,
-    memory: list
-):
+def generate_sql(user_question: str, schema: str, memory: list):
 
     recent_memory = memory[-3:]
 
     memory_text = ""
 
     for item in recent_memory:
-
         memory_text += f"""
 User:
-{item.get('question', '')}
+{item.get("question", "")}
 
 Assistant:
-{item.get('summary', '')}
+{item.get("summary", "")}
 
 """
 
@@ -63,14 +57,8 @@ Instructions:
 
     sql_query = response.content.strip()
 
-    sql_query = sql_query.replace(
-        "```sql",
-        ""
-    )
+    sql_query = sql_query.replace("```sql", "")
 
-    sql_query = sql_query.replace(
-        "```",
-        ""
-    )
+    sql_query = sql_query.replace("```", "")
 
     return sql_query.strip()

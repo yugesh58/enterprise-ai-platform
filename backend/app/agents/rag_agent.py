@@ -2,7 +2,6 @@ from app.agents.base_agent import BaseAgent
 from app.contracts.agent_request import AgentRequest
 from app.contracts.agent_response import AgentResponse
 from app.core.enums import AgentType
-
 from app.workflows.rag.graph import rag_graph
 
 

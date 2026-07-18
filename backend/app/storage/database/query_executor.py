@@ -1,13 +1,12 @@
 from sqlalchemy import text
+
 from app.storage.database.connection import engine
 
 
 def run_query(query: str):
 
     try:
-
         with engine.connect() as connection:
-
             result = connection.execute(text(query))
 
             rows = result.fetchall()
@@ -15,7 +14,4 @@ def run_query(query: str):
             return [dict(row._mapping) for row in rows]
 
     except Exception as e:
-
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}

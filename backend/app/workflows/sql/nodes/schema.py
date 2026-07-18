@@ -5,6 +5,4 @@ def retrieve_schema_node(state):
 
     schema = get_schema()
 
-    return {
-        "schema": schema
-    }
+    return {"schema": schema}

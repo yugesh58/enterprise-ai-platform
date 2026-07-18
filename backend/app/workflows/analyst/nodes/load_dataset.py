@@ -1,9 +1,10 @@
+import pandas as pd
+
+
 def load_data_node(state):
 
-    df = dataset_service.load_dataset(
-        state["dataset_id"]
-    )
+    df = pd.read_csv("app/uploads/sales.csv")
 
     return {
-        "dataframe": df
+        "dataframe": df,
     }

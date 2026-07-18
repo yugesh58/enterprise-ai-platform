@@ -1,5 +1,6 @@
-from sqlalchemy import create_engine
 from pathlib import Path
+
+from sqlalchemy import create_engine
 
 # Database file path
 DB_PATH = Path(__file__).parent / "company.db"

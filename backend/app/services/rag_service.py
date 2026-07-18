@@ -1,23 +1,11 @@
 from app.ai.llm import provider
 
 
-def generate_rag_answer(
-    docs,
-    question
-):
-    
-    context = "\n\n".join(
-        [doc.page_content for doc in docs]
-    )
+def generate_rag_answer(docs, question):
 
-    sources = list(
-        set(
-            [
-                doc.metadata.get("source", "Unknown")
-                for doc in docs
-            ]
-        )
-    )
+    context = "\n\n".join([doc.page_content for doc in docs])
+
+    sources = list(set([doc.metadata.get("source", "Unknown") for doc in docs]))
 
     prompt = f"""
     Answer the user's question using ONLY the provided context.
@@ -36,7 +24,4 @@ def generate_rag_answer(
 
     response = provider.invoke(prompt)
 
-    return {
-        "answer": response.content,
-        "sources": sources
-    }
+    return {"answer": response.content, "sources": sources}

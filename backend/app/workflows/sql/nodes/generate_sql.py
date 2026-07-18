@@ -13,6 +13,4 @@ def generate_sql_node(state):
         memory,
     )
 
-    return {
-        "sql_query": sql_query
-    }
+    return {"sql_query": sql_query}

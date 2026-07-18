@@ -10,10 +10,7 @@ class Settings(BaseSettings):
     Loads configuration from environment variables and the .env file.
     """
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # ==========================================================
     # Application

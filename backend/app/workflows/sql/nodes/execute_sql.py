@@ -10,6 +10,4 @@ def execute_sql_node(state):
 
     result = run_query(sql_query)
 
-    return {
-        "result": result
-    }
+    return {"result": result}

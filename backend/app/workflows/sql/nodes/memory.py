@@ -8,6 +8,4 @@ def retrieve_memory_node(state):
 
     memory = get_memory()
 
-    return {
-        "memory": memory
-    }
+    return {"memory": memory}

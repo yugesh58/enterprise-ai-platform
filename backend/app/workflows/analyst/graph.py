@@ -1,13 +1,11 @@
-from langgraph.graph import START, END, StateGraph
+from app.workflows.analyst.nodes.load_dataset import load_data_node
+from langgraph.graph import END, START, StateGraph
 
-from app.workflows.analyst.state import AnalystState
-
-from backend.app.workflows.analyst.nodes.load_dataset import load_data_node
-from app.workflows.analyst.nodes.generate_pandas import generate_pandas_node
-from app.workflows.analyst.nodes.execute import execute_node
 from app.workflows.analyst.nodes.chart import chart_node
+from app.workflows.analyst.nodes.execute import execute_node
+from app.workflows.analyst.nodes.generate_pandas import generate_pandas_node
 from app.workflows.analyst.nodes.summarize import summarize_node
-
+from app.workflows.analyst.state import AnalystState
 
 graph_builder = StateGraph(AnalystState)
 

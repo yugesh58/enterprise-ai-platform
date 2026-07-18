@@ -13,6 +13,4 @@ def retrieve_documents_node(state):
         state["question"],
     )
 
-    return {
-        "documents": documents
-    }
+    return {"documents": documents}

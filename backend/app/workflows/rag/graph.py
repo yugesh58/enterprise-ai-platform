@@ -1,10 +1,8 @@
-from langgraph.graph import START, END, StateGraph
+from langgraph.graph import END, START, StateGraph
 
-from app.workflows.rag.state import RAGState
-
-from app.workflows.rag.nodes.retrieve import retrieve_documents_node
 from app.workflows.rag.nodes.generate import generate_answer_node
-
+from app.workflows.rag.nodes.retrieve import retrieve_documents_node
+from app.workflows.rag.state import RAGState
 
 graph_builder = StateGraph(RAGState)
 

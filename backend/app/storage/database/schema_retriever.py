@@ -1,22 +1,20 @@
 from sqlalchemy import inspect
+
 from app.storage.database.connection import engine
 
+
 def get_schema():
-    inspector=inspect(engine)
+    inspector = inspect(engine)
 
-    schema_info=[]
+    schema_info = []
 
-    tables=inspector.get_table_names()
+    tables = inspector.get_table_names()
 
     for table in tables:
-        columns=inspector.get_columns(table)
+        columns = inspector.get_columns(table)
 
-        column_names=[
-            column["name"] for column in columns
-        ]
+        column_names = [column["name"] for column in columns]
 
-        schema_info.append(
-            f"{table}({", ".join(column_names)})"
-        )
-    
+        schema_info.append(f"{table}({', '.join(column_names)})")
+
     return "\n".join(schema_info)

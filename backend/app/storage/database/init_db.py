@@ -1,4 +1,3 @@
-
 import sqlite3
 from pathlib import Path
 
@@ -55,8 +54,8 @@ cursor.executemany(
         (1, "Engineering", "Bangalore"),
         (2, "HR", "Mumbai"),
         (3, "Finance", "Delhi"),
-        (4, "Sales", "Pune")
-    ]
+        (4, "Sales", "Pune"),
+    ],
 )
 
 # Employees
@@ -67,8 +66,8 @@ cursor.executemany(
         (102, "Rahul", 2, 80000, "2022-06-10"),
         (103, "Sneha", 3, 95000, "2021-03-22"),
         (104, "Anita", 4, 110000, "2020-11-01"),
-        (105, "Karan", 1, 130000, "2019-07-18")
-    ]
+        (105, "Karan", 1, 130000, "2019-07-18"),
+    ],
 )
 
 # Sales
@@ -78,8 +77,8 @@ cursor.executemany(
         (1, 104, "Laptop", 150000, "2025-01-10"),
         (2, 104, "Monitor", 50000, "2025-01-15"),
         (3, 101, "Cloud Service", 200000, "2025-02-01"),
-        (4, 105, "AI Platform", 350000, "2025-02-20")
-    ]
+        (4, 105, "AI Platform", 350000, "2025-02-20"),
+    ],
 )
 
 # Commit changes

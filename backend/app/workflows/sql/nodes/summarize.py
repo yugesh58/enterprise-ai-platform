@@ -11,6 +11,4 @@ def summarize_node(state):
         state["result"],
     )
 
-    return {
-        "summary": summary
-    }
+    return {"summary": summary}

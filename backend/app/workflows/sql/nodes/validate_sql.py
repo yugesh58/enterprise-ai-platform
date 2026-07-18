@@ -1,8 +1,6 @@
 from app.core.enums import ValidationStatus
 
 
-
-
 def validate_sql_node(state):
     """
     Validate the generated SQL query before execution.

@@ -19,8 +19,6 @@ class EmbeddingFactory:
         provider_class = EMBEDDING_PROVIDER_REGISTRY.get(provider)
 
         if provider_class is None:
-            raise ValueError(
-                f"Unsupported embedding provider: {provider}"
-            )
+            raise ValueError(f"Unsupported embedding provider: {provider}")
 
         return provider_class()

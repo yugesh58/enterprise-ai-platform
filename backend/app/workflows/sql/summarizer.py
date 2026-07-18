@@ -1,7 +1,8 @@
 from app.ai.llm import provider
 
-def summarize_result(question:str, result:list):
-    prompt=f"""
+
+def summarize_result(question: str, result: list):
+    prompt = f"""
     
     You are a data analyst.
 
@@ -22,6 +23,6 @@ def summarize_result(question:str, result:list):
     Provide a concise summary based strictly on the result.
 
     """
-    response=provider.invoke(prompt)
+    response = provider.invoke(prompt)
 
     return response.content.strip()
