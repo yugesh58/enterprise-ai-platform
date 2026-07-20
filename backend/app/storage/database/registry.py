@@ -15,7 +15,7 @@ class DatabaseRegistry:
         cls._providers[name.lower()] = provider
 
     @classmethod
-    def get(cls, name: str) -> Type[DatabaseProvider]:
+    def get(cls, name: str):
         provider = cls._providers.get(name.lower())
 
         if provider is None:
