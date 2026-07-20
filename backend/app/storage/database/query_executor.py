@@ -1,17 +1,6 @@
-from sqlalchemy import text
-
-from app.storage.database.connection import engine
+from app.storage.database.factory import DatabaseFactory
 
 
 def run_query(query: str):
-
-    try:
-        with engine.connect() as connection:
-            result = connection.execute(text(query))
-
-            rows = result.fetchall()
-
-            return [dict(row._mapping) for row in rows]
-
-    except Exception as e:
-        return {"error": str(e)}
+    db = DatabaseFactory.create()
+    return db.fetch_all(query)

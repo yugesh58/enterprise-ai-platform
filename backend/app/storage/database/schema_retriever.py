@@ -1,20 +1,6 @@
-from sqlalchemy import inspect
-
-from app.storage.database.connection import engine
+from app.storage.database.factory import DatabaseFactory
 
 
 def get_schema():
-    inspector = inspect(engine)
-
-    schema_info = []
-
-    tables = inspector.get_table_names()
-
-    for table in tables:
-        columns = inspector.get_columns(table)
-
-        column_names = [column["name"] for column in columns]
-
-        schema_info.append(f"{table}({', '.join(column_names)})")
-
-    return "\n".join(schema_info)
+    db = DatabaseFactory.create()
+    return db.get_schema()

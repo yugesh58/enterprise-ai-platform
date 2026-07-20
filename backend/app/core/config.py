@@ -37,16 +37,60 @@ class Settings(BaseSettings):
     MAX_TOKENS: int = 4000
 
     # ==========================================================
-    # Storage
+    # Database
     # ==========================================================
-    DATABASE_URL: str = "sqlite:///./enterprise.db"
-    VECTOR_DB_PATH: str = "./app/storage/vectorstore/faiss_index"
+
+    DATABASE_PROVIDER: str = "postgres"
+
+    DATABASE_HOST: str = "localhost"
+    DATABASE_PORT: int = 5432
+    DATABASE_NAME: str = "enterprise_ai"
+    DATABASE_USER: str = "enterprise_user"
+    DATABASE_PASSWORD: str = "enterprise_password"
+
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_MAX_OVERFLOW: int = 20
+    DATABASE_POOL_TIMEOUT: int = 30
+    DATABASE_POOL_RECYCLE: int = 1800
+    DATABASE_ECHO: bool = False
+
+    # ==========================================================
+    # Qdrant
+    # ==========================================================
+
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    QDRANT_COLLECTION: str = "enterprise_ai"
+
+    # ==========================================================
+    # Redis
+    # ==========================================================
+
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+
+    # ==========================================================
+    # Azure Blob Storage
+    # ==========================================================
+
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_STORAGE_CONTAINER: str = "documents"
 
     # ==========================================================
     # Logging
     # ==========================================================
+
     LOG_LEVEL: str = "INFO"
 
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+        f"postgresql+psycopg://"
+        f"{self.DATABASE_USER}:{self.DATABASE_PASSWORD}"
+        f"@{self.DATABASE_HOST}:{self.DATABASE_PORT}"
+        f"/{self.DATABASE_NAME}"
+    )
 
 @lru_cache
 def get_settings() -> Settings:
