@@ -83,6 +83,14 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    UPLOAD_DIRECTORY: str = "uploads"
+
+    # ==========================================================
+    # Vector Store
+    # ==========================================================
+
+    VECTOR_DB_PATH: str = "storage/vectorstore/faiss_index"
+
     @property
     def DATABASE_URL(self) -> str:
         return (

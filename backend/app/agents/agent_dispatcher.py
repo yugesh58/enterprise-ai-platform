@@ -1,7 +1,7 @@
 from app.agents.base_agent import BaseAgent
 from app.agents.registry import AgentRegistry
-from app.contracts.agent_request import AgentRequest
-from app.contracts.agent_response import AgentResponse
+from app.schemas.agent_request import AgentRequest
+from app.schemas.agent_response import AgentResponse
 
 _registry = AgentRegistry()
 

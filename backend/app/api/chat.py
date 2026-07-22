@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.agents.agent_dispatcher import dispatch_agent
-from app.contracts.agent_request import AgentRequest
+from app.schemas.agent_request import AgentRequest
 from app.models.chat_request import ChatRequest  # <-- check your class name
 from app.services.router import route_question
 

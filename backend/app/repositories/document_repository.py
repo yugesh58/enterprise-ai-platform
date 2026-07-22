@@ -1,18 +1,19 @@
 from uuid import UUID
 
-from app.enums.document_status import DocumentStatus
-from sqlalchemy import insert
+from sqlalchemy import delete, insert, select, update
+from sqlalchemy.engine import Connection
 
-from app.core.database import get_connection
+from app.enums.document_status import DocumentStatus
 from app.models.document import documents
 
 
 class DocumentRepository:
-    def __init__(self, connection: Connection):
-        self._connection = connection
     """
     Repository responsible for CRUD operations on documents.
     """
+
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
 
     def create(
         self,
@@ -21,21 +22,28 @@ class DocumentRepository:
         file_size: int,
         storage_path: str,
     ) -> UUID:
+        """
+        Create a new document record.
+
+        Returns:
+            UUID: ID of the newly created document.
+        """
 
         statement = (
-        insert(documents)
-        .values(
-            filename=filename,
-            content_type=content_type,
-            file_size=file_size,
-            storage_path=storage_path,
-        ).returning(documents.c.id)
-    )
+            insert(documents)
+            .values(
+                filename=filename,
+                content_type=content_type,
+                file_size=file_size,
+                storage_path=storage_path,
+            )
+            .returning(documents.c.id)
+        )
 
         result = self._connection.execute(statement)
 
         return result.scalar_one()
-    
+
     def get_by_id(
         self,
         document_id: UUID,
@@ -57,6 +65,7 @@ class DocumentRepository:
             return None
 
         return dict(row)
+
     def update_status(
         self,
         document_id: UUID,
@@ -79,7 +88,7 @@ class DocumentRepository:
         document_id: UUID,
     ) -> None:
         """
-        Delete a document record.
+        Delete a document.
         """
 
         statement = (

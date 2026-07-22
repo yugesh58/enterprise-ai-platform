@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.contracts.agent_request import AgentRequest
-from app.contracts.agent_response import AgentResponse
+from app.schemas.agent_request import AgentRequest
+from app.schemas.agent_response import AgentResponse
 from app.core.logging import get_logger
 
 
