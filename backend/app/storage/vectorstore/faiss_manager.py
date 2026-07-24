@@ -1,6 +1,6 @@
 from langchain_community.vectorstores import FAISS
 
-from app.ai.embeddings import embeddings
+from app.ai.embeddings import get_embeddings
 from app.core.config import settings
 
 FAISS_PATH = settings.VECTOR_DB_PATH
@@ -10,7 +10,7 @@ def create_vectorstore(documents):
 
     vector_store = FAISS.from_documents(
         documents,
-        embedding=embeddings,
+        embedding=get_embeddings(),
     )
 
     return vector_store

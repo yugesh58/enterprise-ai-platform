@@ -15,8 +15,8 @@ class AgentRegistry:
     def __init__(self) -> None:
         self._agents: Dict[str, BaseAgent] = {
             AgentType.SQL: SQLAgent(),
-            AgentType.RAG: RAGAgent(),
-            AgentType.ANALYST: AnalystAgent(),
+            #AgentType.RAG: RAGAgent(),
+            #AgentType.ANALYST: AnalystAgent(),
         }
 
     def get(self, name: str) -> BaseAgent:

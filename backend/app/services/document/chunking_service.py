@@ -64,14 +64,15 @@ class ChunkingService:
 
                 chunks.append(
                     DocumentChunk(
-                        document_id=document_id,
-                        text=text,
-                        metadata=ChunkMetadata(
-                            source=source,
-                            page_number=page.page_number,
-                            chunk_index=chunk_index,
-                        ),
-                    )
+                    chunk_id=f"{document_id}_{chunk_index}",
+                    document_id=document_id,
+                    text=text,
+                    metadata=ChunkMetadata(
+                    source=source,
+                    page_number=page.page_number,
+                    chunk_index=chunk_index,
+                ),
+                )
                 )
 
                 chunk_index += 1
