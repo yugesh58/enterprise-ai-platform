@@ -1,132 +1,158 @@
+from typing import Optional
+
 from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client.models import (
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointIdsList,
+    PointStruct,
+)
 
 from app.core.config import settings
 from app.storage.vectorstore.base import VectorProvider
-from qdrant_client.http.models import Distance, VectorParams
-
-from qdrant_client.models import PointStruct
 from app.storage.vectorstore.models.vector_point import VectorPoint
 
-from qdrant_client.models import PointIdsList
 
 class QdrantProvider(VectorProvider):
 
     def __init__(self):
         self._client = None
 
-    def connect(self):
+    def _ensure_connected(self) -> None:
+        if self._client is None:
+            raise RuntimeError(
+                "Qdrant client is not connected."
+            )
+
+    def connect(self) -> None:
         """
-        Establish a connection to the Qdrant server.
+        Establish connection with Qdrant.
         """
+
+        if self._client is not None:
+            return
+
         self._client = QdrantClient(
-        host=settings.QDRANT_HOST,
-        port=settings.QDRANT_PORT,
+            host=settings.QDRANT_HOST,
+            port=settings.QDRANT_PORT,
         )
 
-        # Verify the connection
         self._client.get_collections()
 
     def create_collection(
-    self,
-    collection_name: str,
-    vector_size: int,
-    distance: str = "COSINE",
+        self,
+        collection_name: str,
+        vector_size: int,
+        distance: str = "COSINE",
     ) -> None:
-        """
-        Create a Qdrant collection if it does not already exist.
-        """
+
+        self._ensure_connected()
+
         if vector_size <= 0:
-          raise ValueError("vector_size must be greater than zero.")
-        collections = self._client.get_collections()
-
-        existing = {
-            collection.name
-            for collection in collections.collections
-        }
-
-        if collection_name in existing:
-            return
+            raise ValueError(
+                "vector_size must be greater than zero."
+            )
 
         distance_map = {
             "COSINE": Distance.COSINE,
             "DOT": Distance.DOT,
             "EUCLID": Distance.EUCLID,
-            }
+        }
+
+        distance_enum = distance_map.get(distance.upper())
+
+        if distance_enum is None:
+            raise ValueError(
+                f"Unsupported distance metric: {distance}"
+            )
+
+        existing = {
+            collection.name
+            for collection in self._client.get_collections().collections
+        }
+
+        if collection_name in existing:
+            return
 
         self._client.create_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(
                 size=vector_size,
-            distance=distance_map[distance],
+                distance=distance_enum,
             ),
         )
 
-    def delete_collection(self, collection_name):
-        pass
-
     def upsert(
-    self,
-    collection_name: str,
-    points: list[VectorPoint],
+        self,
+        collection_name: str,
+        points: list[VectorPoint],
     ) -> None:
-        """
-        Insert or update vector points in a Qdrant collection.
-        """
+
+        self._ensure_connected()
 
         if not points:
             return
 
-        qdrant_points = [
-            PointStruct(
-            id=point.id,
-            vector=point.vector,
-            payload=point.payload,
-            )
-            for point in points
-        ]
-
         self._client.upsert(
             collection_name=collection_name,
-            points=qdrant_points,
+            points=[
+                PointStruct(
+                    id=point.id,
+                    vector=point.vector,
+                    payload=point.payload,
+                )
+                for point in points
+            ],
         )
 
     def search(
-    self,
-    collection_name: str,
-    query_vector: list[float],
-    limit: int = 5,
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        limit: int = 5,
+        filters: Optional[dict] = None,
     ) -> list[dict]:
-        """
-        Search for similar vectors in a collection.
-        """
+
+        self._ensure_connected()
+
+        query_filter = None
+
+        if filters:
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key=key,
+                        match=MatchValue(value=value),
+                    )
+                    for key, value in filters.items()
+                ]
+            )
 
         results = self._client.query_points(
             collection_name=collection_name,
             query=query_vector,
+            query_filter=query_filter,
             limit=limit,
         )
 
-        matches = []
-
-        for point in results.points:
-            matches.append(
+        return [
             {
                 "id": str(point.id),
                 "score": point.score,
                 "payload": point.payload,
             }
-        )
-
-        return matches
+            for point in results.points
+        ]
 
     def delete(
-    self,
-    collection_name: str,
-    point_ids: list[str],
+        self,
+        collection_name: str,
+        point_ids: list[str],
     ) -> None:
-        """
-        Delete vector points from a Qdrant collection.
-        """
+
+        self._ensure_connected()
 
         if not point_ids:
             return
@@ -139,18 +165,15 @@ class QdrantProvider(VectorProvider):
         )
 
     def delete_collection(
-    self,
-    collection_name: str,
+        self,
+        collection_name: str,
     ) -> None:
-        """
-        Delete a Qdrant collection.
-        """
 
-        collections = self._client.get_collections()
+        self._ensure_connected()
 
         existing = {
             collection.name
-            for collection in collections.collections
+            for collection in self._client.get_collections().collections
         }
 
         if collection_name not in existing:
@@ -160,5 +183,5 @@ class QdrantProvider(VectorProvider):
             collection_name=collection_name,
         )
 
-    def close(self) -> close:
+    def close(self) -> None:
         self._client = None

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Optional
 
+from app.storage.vectorstore.models.vector_point import VectorPoint
 
 
 class VectorProvider(ABC):
@@ -18,7 +19,7 @@ class VectorProvider(ABC):
         self,
         collection_name: str,
         vector_size: int,
-        distance: str,
+        distance: str = "COSINE",
     ) -> None:
         """Create a vector collection."""
         pass
@@ -35,9 +36,9 @@ class VectorProvider(ABC):
     def upsert(
         self,
         collection_name: str,
-        vectors: list[dict[str, Any]],
+        points: list[VectorPoint],
     ) -> None:
-        """Insert or update vectors."""
+        """Insert or update vector points."""
         pass
 
     @abstractmethod
@@ -46,17 +47,18 @@ class VectorProvider(ABC):
         collection_name: str,
         query_vector: list[float],
         limit: int = 5,
-    ) -> list[dict[str, Any]]:
-        """Search for similar vectors."""
+        filters: Optional[dict] = None,
+    ) -> list[dict]:
+        """Search similar vectors."""
         pass
 
     @abstractmethod
     def delete(
         self,
         collection_name: str,
-        ids: list[str],
+        point_ids: list[str],
     ) -> None:
-        """Delete vectors by ID."""
+        """Delete vectors."""
         pass
 
     @abstractmethod

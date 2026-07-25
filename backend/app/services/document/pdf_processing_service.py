@@ -14,21 +14,16 @@ class PDFProcessingService:
 
     def extract_document(
         self,
-        file_path: str | Path,
+        pdf_bytes: bytes,
     ) -> PDFProcessingResult:
         """
         Extract metadata and page-wise text from a PDF.
         """
 
-        file_path = Path(file_path)
+        if not pdf_bytes:
+            raise ValueError("PDF content cannot be empty.")
 
-        if not file_path.exists():
-            raise FileNotFoundError(f"PDF not found: {file_path}")
-
-        if file_path.suffix.lower() != ".pdf":
-            raise ValueError("Only PDF files are supported.")
-
-        with fitz.open(file_path) as document:
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as document:
             return PDFProcessingResult(
                 page_count=document.page_count,
                 metadata=self._extract_metadata(document),

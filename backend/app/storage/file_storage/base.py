@@ -19,6 +19,16 @@ class FileStorageProvider(ABC):
         pass
 
     @abstractmethod
+    def read(
+        self,
+        path: Path,
+    ) -> bytes:
+        """
+        Read a file from storage.
+        """
+        pass
+
+    @abstractmethod
     def delete(
         self,
         path: Path,

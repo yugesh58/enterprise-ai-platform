@@ -74,3 +74,15 @@ class LocalStorageProvider(FileStorageProvider):
 
         if path.exists():
             path.unlink()
+    def read(
+    self,
+    path: Path, 
+    ) -> bytes:
+        """
+        Read a file from local storage.
+        """
+
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        return path.read_bytes()

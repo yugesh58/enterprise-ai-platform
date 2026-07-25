@@ -1,13 +1,22 @@
-from pathlib import Path
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+)
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-
-from app.core.config import settings
-from app.core.database import get_connection
-from app.repositories.document_repository import DocumentRepository
-from app.services.document.document_service import DocumentService
-from app.storage.file_storage.providers.local_storage_provider import (
-    LocalStorageProvider,
+from app.api.dependencies.document import (
+    get_document_indexing_service,
+    get_document_service,
+)
+from app.enums.document_status import DocumentStatus
+from app.services.document.document_indexing_service import (
+    DocumentIndexingService,
+)
+from app.services.document.document_service import (
+    DocumentService,
 )
 
 router = APIRouter(
@@ -16,41 +25,40 @@ router = APIRouter(
 )
 
 
-def get_document_service() -> DocumentService:
-    """
-    Create and return a DocumentService instance.
-    """
-
-    with get_connection() as connection:
-
-        repository = DocumentRepository(connection)
-
-        storage = LocalStorageProvider(
-            Path(settings.UPLOAD_DIRECTORY)
-        )
-
-        yield DocumentService(
-            repository=repository,
-            storage=storage,
-        )
-
-
-@router.post("/upload")
+@router.post(
+    "/upload",
+    status_code=202,
+)
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    service: DocumentService = Depends(get_document_service),
+    document_service: DocumentService = Depends(
+        get_document_service
+    ),
+    indexing_service: DocumentIndexingService = Depends(
+        get_document_indexing_service
+    ),
 ):
     """
-    Upload a document and persist its metadata.
+    Upload a document and start indexing it in the background.
+
+    The endpoint immediately returns once the document has been
+    persisted. PDF extraction, chunking, embedding generation and
+    vector indexing continue asynchronously.
     """
 
     try:
         content = await file.read()
 
-        document_id = service.upload_document(
+        document_id = document_service.upload_document(
             filename=file.filename,
             content_type=file.content_type,
             content=content,
+        )
+
+        background_tasks.add_task(
+            indexing_service.index_document,
+            document_id,
         )
 
         return {
@@ -58,16 +66,22 @@ async def upload_document(
             "filename": file.filename,
             "content_type": file.content_type,
             "size": len(content),
-            "message": "Document uploaded successfully.",
+            "status": DocumentStatus.PROCESSING.value,
+            "message": (
+                "Document uploaded successfully. "
+                "Indexing has started."
+            ),
         }
 
     except ValueError as ex:
+
         raise HTTPException(
             status_code=400,
             detail=str(ex),
         )
 
     except Exception as ex:
+
         raise HTTPException(
             status_code=500,
             detail=f"Document upload failed: {str(ex)}",
