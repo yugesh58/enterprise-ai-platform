@@ -1,5 +1,12 @@
-venv/
-.env
 __pycache__/
 *.pyc
 .DS_Store
+
+venv/
+.env
+
+app/charts/*.png
+
+app/storage/vectorstore/faiss_index/
+
+app/storage/database/company.db

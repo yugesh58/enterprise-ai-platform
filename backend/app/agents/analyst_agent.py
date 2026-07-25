@@ -1,29 +1,29 @@
-import pandas as pd
-from app.services.pandas_generator import generate_pandas_query
-from app.services.pandas_executor import execute_pandas_query
-from app.services.chart_generator import generate_chart
-from app.services.analyst_summarizer import analyst_summarizer
+from app.agents.base_agent import BaseAgent
+from app.schemas.agent_request import AgentRequest
+from app.schemas.agent_response import AgentResponse
+from app.core.enums import AgentType
+from app.workflows.analyst.graph import analyst_graph
 
-def analyst_agent_query(question):
 
-    df = pd.read_csv(
-        "app/uploads/sales.csv"
-    )
-    columns=list(df.columns)
+class AnalystAgent(BaseAgent):
+    def execute(
+        self,
+        request: AgentRequest,
+    ) -> AgentResponse:
 
-    pandas_code=generate_pandas_query(question=question,columns=columns)
+        self.logger.info("Executing Analyst Agent")
 
-    result=execute_pandas_query(pandas_code=pandas_code,df=df)
+        graph_response = analyst_graph.invoke(
+            {
+                "question": request.question,
+            }
+        )
 
-    chart_path=generate_chart(result=result)
+        request.context.selected_agent = AgentType.ANALYST
 
-    summary=analyst_summarizer(question,result)
+        self.logger.info("Analyst Agent execution completed")
 
-    return {
-        "agent": "ANALYST_AGENT",
-        "question": question,
-        "generated_code": pandas_code,
-        "summary": summary,
-        "chart_path": chart_path,
-        "result": str(result)
-    }
+        return AgentResponse(
+            answer=graph_response["summary"],
+            chart=graph_response.get("chart_path"),
+        )

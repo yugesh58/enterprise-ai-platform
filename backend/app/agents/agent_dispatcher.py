@@ -1,24 +1,19 @@
-from app.agents.sql_agent import sql_agent_query
-from app.agents.rag_agent import rag_agent_query
-from app.agents.analyst_agent import analyst_agent_query
+from app.agents.base_agent import BaseAgent
+from app.agents.registry import AgentRegistry
+from app.schemas.agent_request import AgentRequest
+from app.schemas.agent_response import AgentResponse
 
-def dispatch_agent(agent, question):
+_registry = AgentRegistry()
 
-    print("=== DISPATCHER CALLED ===")
-    print(f"Agent received: '{agent}'")
 
-    if agent == "ANALYST_AGENT":
-        print("Routing to ANALYST_AGENT")
-        return analyst_agent_query(question)
+def dispatch_agent(
+    agent_name: str,
+    request: AgentRequest,
+) -> AgentResponse:
+    """
+    Dispatch the request to the appropriate agent.
+    """
 
-    if agent == "SQL_AGENT":
-        print("Routing to SQL_AGENT")
-        return sql_agent_query(question)
+    agent: BaseAgent = _registry.get(agent_name)
 
-    if agent == "RAG_AGENT":
-        print("Routing to RAG_AGENT")
-        return rag_agent_query(question)
-
-    return {
-        "error": f"unknown agent: {agent}"
-    }
+    return agent.execute(request)

@@ -1,8 +1,9 @@
+from app.ai.llm import provider
 from app.prompts.analyst_prompt import ANALYST_SYSTEM_PROMPT
-from app.services.llm import llm
 
-def generate_pandas_query(question:str,columns:list):
-    SYSTEM_PROMPT=f"""
+
+def generate_pandas_query(question: str, columns: list):
+    SYSTEM_PROMPT = f"""
     
     Instructions:
     {ANALYST_SYSTEM_PROMPT}
@@ -15,6 +16,6 @@ def generate_pandas_query(question:str,columns:list):
 
     """
 
-    result=llm.invoke(SYSTEM_PROMPT)
+    result = provider.invoke(SYSTEM_PROMPT)
 
     return result.content.strip()

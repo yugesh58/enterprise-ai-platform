@@ -1,24 +1,38 @@
 from fastapi import APIRouter
 
 from app.agents.agent_dispatcher import dispatch_agent
+from app.schemas.agent_request import AgentRequest
+from app.models.chat_request import ChatRequest  # <-- check your class name
 from app.services.router import route_question
-from app.models.chat_request import chatRequest
 
 router = APIRouter()
 
-@router.post("/chat")
-async def chat(request:chatRequest):
-    question="Which region has highest sales"
-    question=request.question
-    selected_agent=route_question(question)
 
-    response = dispatch_agent(selected_agent,question)
+@router.post("/chat")
+async def chat(request: ChatRequest):
+
+    # User question
+    question = request.question
+
+    # Decide which agent to use
     selected_agent = route_question(question)
 
-    print(f"Selected Agent: '{selected_agent}'")
-    print(f"Length: {len(selected_agent)}")
+    # Build the AgentRequest
+    agent_request = AgentRequest(question=question)
+
+    # Execute the agent
+    response = dispatch_agent(
+        selected_agent,
+        agent_request,
+    )
 
     return {
-        "selected_agent":selected_agent,
-        "response": response
+        "selected_agent": selected_agent,
+        "answer": response.answer,
+        "status": response.status,
+        "message": response.message,
+        "data": response.data,
+        "chart": response.chart,
+        "citations": response.citations,
+        "metadata": response.metadata,
     }

@@ -1,0 +1,114 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: enterprise-ai-postgres
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ}
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - enterprise-ai-network
+
+
+  redis:
+    image: redis:8-alpine
+    container_name: enterprise-ai-redis
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    command: redis-server --appendonly yes
+
+    ports:
+      - "${REDIS_PORT}:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - enterprise-ai-network
+
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: enterprise-ai-qdrant
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "${QDRANT_PORT}:6333"
+
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+    networks:
+      - enterprise-ai-network
+
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: enterprise-ai-pgadmin
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+
+    ports:
+      - "${PGADMIN_PORT}:80"
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - enterprise-ai-network
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  pgadmin_data:
+
+
+networks:
+  enterprise-ai-network:
+    driver: bridge
