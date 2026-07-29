@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy import delete, insert, select, update
-from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Session
 
 from app.enums.document_status import DocumentStatus
 from app.models.document import documents
@@ -12,7 +12,7 @@ class DocumentRepository:
     Repository responsible for CRUD operations on documents.
     """
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: Session) -> None:
         self._connection = connection
 
     def create(
@@ -24,10 +24,14 @@ class DocumentRepository:
     ) -> UUID:
         """
         Create a new document record.
-
-        Returns:
-            UUID: ID of the newly created document.
         """
+
+        print("\n" + "=" * 80)
+        print("DOCUMENT CREATE")
+        print("=" * 80)
+        print(f"Database : {self._connection.bind.url}")
+        print(f"Filename : {filename}")
+        print(f"Storage  : {storage_path}")
 
         statement = (
             insert(documents)
@@ -42,15 +46,22 @@ class DocumentRepository:
 
         result = self._connection.execute(statement)
 
-        return result.scalar_one()
+        document_id = result.scalar_one()
+
+        print(f"Generated ID : {document_id}")
+
+        self._connection.commit()
+
+        print("✅ INSERT COMMITTED")
+
+        return document_id
 
     def get_by_id(
         self,
         document_id: UUID,
     ) -> dict | None:
-        """
-        Retrieve a document by its ID.
-        """
+
+        print(f"\nLooking for document: {document_id}")
 
         statement = (
             select(documents)
@@ -62,7 +73,10 @@ class DocumentRepository:
         row = result.mappings().first()
 
         if row is None:
+            print("❌ Document NOT FOUND")
             return None
+
+        print("✅ Document FOUND")
 
         return dict(row)
 
@@ -71,9 +85,8 @@ class DocumentRepository:
         document_id: UUID,
         status: DocumentStatus,
     ) -> None:
-        """
-        Update the processing status of a document.
-        """
+
+        print(f"\nUpdating status -> {status}")
 
         statement = (
             update(documents)
@@ -82,14 +95,16 @@ class DocumentRepository:
         )
 
         self._connection.execute(statement)
+        self._connection.commit()
+
+        print("✅ STATUS UPDATED")
 
     def delete(
         self,
         document_id: UUID,
     ) -> None:
-        """
-        Delete a document.
-        """
+
+        print(f"\nDeleting document: {document_id}")
 
         statement = (
             delete(documents)
@@ -97,3 +112,6 @@ class DocumentRepository:
         )
 
         self._connection.execute(statement)
+        self._connection.commit()
+
+        print("✅ DELETE COMMITTED")

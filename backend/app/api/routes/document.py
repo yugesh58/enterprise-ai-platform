@@ -6,11 +6,26 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
+from app.schemas.chat import (
+    ChatRequest,
+    ChatResponse,
+)
+from app.services.document.document_chat_service import (
+    DocumentChatService,
+)
+from app.services.document.document_search_service import (
+    DocumentSearchService,
+)
 
 from app.api.dependencies.document import (
     get_document_indexing_service,
+    get_document_search_service,
     get_document_service,
+    get_document_chat_service,
 )
+
+from app.schemas.search import SearchRequest
+
 from app.enums.document_status import DocumentStatus
 from app.services.document.document_indexing_service import (
     DocumentIndexingService,
@@ -86,3 +101,34 @@ async def upload_document(
             status_code=500,
             detail=f"Document upload failed: {str(ex)}",
         )
+
+@router.post("/search")
+def search_documents(
+    request: SearchRequest,
+    search_service: DocumentSearchService = Depends(
+        get_document_search_service
+    ),
+):
+    results = search_service.search(
+        query=request.query,
+        top_k=request.top_k,
+        document_id=request.document_id,
+    )
+
+    return {
+        "query": request.query,
+        "results": results,
+    }
+
+@router.post("/chat", response_model=ChatResponse)
+def chat(
+    request: ChatRequest,
+    chat_service: DocumentChatService = Depends(
+        get_document_chat_service,
+    ),
+):
+
+    return chat_service.chat(
+        question=request.question,
+        top_k=request.top_k,
+    )

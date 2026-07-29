@@ -30,7 +30,7 @@ class VectorMapper:
 
             vector_points.append(
                 VectorPoint(
-                    id=chunk.chunk_id,
+                    id=str(chunk.chunk_id),
                     vector=chunk.embedding,
                     payload={
                         "document_id": str(chunk.document_id),

@@ -118,7 +118,7 @@ class QdrantProvider(VectorProvider):
         self._ensure_connected()
 
         query_filter = None
-
+        print("Filters:", filters)
         if filters:
             query_filter = Filter(
                 must=[
@@ -129,6 +129,20 @@ class QdrantProvider(VectorProvider):
                     for key, value in filters.items()
                 ]
             )
+            print("=" * 60)
+            print("Searching collection:", collection_name)
+
+            collections = self._client.get_collections()
+
+            print("Available collections:")
+            for c in collections.collections:
+                print("-", c.name)
+
+            info = self._client.get_collection(collection_name)
+            print("Points in collection:", info.points_count)
+            print("=" * 60)
+
+        
 
         results = self._client.query_points(
             collection_name=collection_name,
@@ -136,6 +150,7 @@ class QdrantProvider(VectorProvider):
             query_filter=query_filter,
             limit=limit,
         )
+        print(results)
 
         return [
             {

@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -37,14 +37,6 @@ class ChunkingService:
     ) -> list[DocumentChunk]:
         """
         Split an extracted PDF into searchable chunks.
-
-        Args:
-            document_id: Database document UUID.
-            source: Original document name.
-            pdf: Extracted PDF processing result.
-
-        Returns:
-            List of document chunks.
         """
 
         chunks: list[DocumentChunk] = []
@@ -64,15 +56,15 @@ class ChunkingService:
 
                 chunks.append(
                     DocumentChunk(
-                    chunk_id=f"{document_id}_{chunk_index}",
-                    document_id=document_id,
-                    text=text,
-                    metadata=ChunkMetadata(
-                    source=source,
-                    page_number=page.page_number,
-                    chunk_index=chunk_index,
-                ),
-                )
+                        chunk_id=uuid4(),          # ✅ Generate a valid UUID
+                        document_id=document_id,
+                        text=text,
+                        metadata=ChunkMetadata(
+                            source=source,
+                            page_number=page.page_number,
+                            chunk_index=chunk_index,
+                        ),
+                    )
                 )
 
                 chunk_index += 1

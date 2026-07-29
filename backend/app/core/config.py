@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "enterprise_ai"
+    VECTOR_DB: str = "qdrant"
 
     # ==========================================================
     # Redis
@@ -89,7 +90,7 @@ class Settings(BaseSettings):
     # Vector Store
     # ==========================================================
 
-    VECTOR_DB_PATH: str = "storage/vectorstore/faiss_index"
+    
 
     @property
     def DATABASE_URL(self) -> str:
