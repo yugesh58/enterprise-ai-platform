@@ -1,3 +1,5 @@
+import time
+import traceback
 from uuid import UUID
 
 from app.ai.embeddings import get_embeddings
@@ -38,13 +40,21 @@ class DocumentIndexingService:
         document_id: UUID,
     ) -> None:
         """
-        Process a document and index it into Qdrant.
+        Process a document and index it into the vector database.
         """
+
+        print("\n" + "=" * 80)
+        print(f"🚀 Starting indexing for document: {document_id}")
+        print("=" * 80)
+
+        start_time = time.time()
 
         document = self._repository.get_by_id(document_id)
 
         if document is None:
             raise ValueError(f"Document {document_id} not found.")
+
+        print(f"📄 Filename: {document['filename']}")
 
         self._repository.update_status(
             document_id,
@@ -52,30 +62,54 @@ class DocumentIndexingService:
         )
 
         try:
+            # -----------------------------------------------------------------
+            print("\n[1/7] Reading document from storage...")
             pdf_bytes = self._storage.read(document["storage_path"])
+            print(f"✅ Read {len(pdf_bytes):,} bytes")
 
-            pdf = self._pdf_processing_service.extract_document(
-                pdf_bytes
-            )
+            # -----------------------------------------------------------------
+            print("\n[2/7] Extracting PDF...")
+            pdf = self._pdf_processing_service.extract_document(pdf_bytes)
 
+            print(f"✅ Pages extracted: {len(pdf.pages)}")
+
+            # -----------------------------------------------------------------
+            print("\n[3/7] Creating chunks...")
             chunks = self._chunking_service.chunk_document(
                 document_id=document_id,
                 source=document["filename"],
                 pdf=pdf,
             )
 
+            print(f"✅ Generated {len(chunks)} chunks")
+
             if not chunks:
+                print("⚠️ No chunks generated.")
+
                 self._repository.update_status(
                     document_id,
                     DocumentStatus.INDEXED,
                 )
+
                 return
+
+            # -----------------------------------------------------------------
+            print("\n[4/7] Preparing text for embeddings...")
 
             texts = [chunk.text for chunk in chunks]
 
-            embeddings = self._embeddings.embed_documents(
-                texts
-            )
+            print(f"✅ Sending {len(texts)} chunks to embedding model")
+
+            # -----------------------------------------------------------------
+            print("\n[5/7] Generating embeddings...")
+
+            embeddings = self._embeddings.embed_documents(texts)
+            print("Index embedding dimension:", len(embeddings[0]))
+
+            print(f"✅ Received {len(embeddings)} embeddings")
+
+            # -----------------------------------------------------------------
+            print("\n[6/7] Creating vector points...")
 
             embedded_chunks = [
                 EmbeddedChunk(
@@ -96,17 +130,47 @@ class DocumentIndexingService:
                 embedded_chunks
             )
 
+            print(f"✅ Created {len(vector_points)} vector points")
+
+            # -----------------------------------------------------------------
+            print("\n[7/7] Uploading vectors to Qdrant...")
+
             self._vector_provider.upsert(
                 collection_name=settings.QDRANT_COLLECTION,
                 points=vector_points,
             )
+
+            print("✅ Successfully uploaded vectors")
+
+            # -----------------------------------------------------------------
+            print("\nUpdating document status...")
 
             self._repository.update_status(
                 document_id,
                 DocumentStatus.INDEXED,
             )
 
-        except Exception:
+            elapsed = time.time() - start_time
+
+            print("\n" + "=" * 80)
+            print("🎉 INDEXING COMPLETED SUCCESSFULLY")
+            print(f"Document ID : {document_id}")
+            print(f"Chunks      : {len(chunks)}")
+            print(f"Vectors     : {len(vector_points)}")
+            print(f"Time Taken  : {elapsed:.2f} seconds")
+            print("=" * 80)
+
+        except Exception as e:
+
+            print("\n" + "=" * 80)
+            print("❌ INDEXING FAILED")
+            print("=" * 80)
+            print(f"Document ID : {document_id}")
+            print(f"Error Type  : {type(e).__name__}")
+            print(f"Error       : {e}")
+            print("\nFull traceback:\n")
+            traceback.print_exc()
+            print("=" * 80)
 
             self._repository.update_status(
                 document_id,

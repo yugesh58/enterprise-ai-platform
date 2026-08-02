@@ -1,9 +1,8 @@
+from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 from app.storage.file_storage.base import FileStorageProvider
-
-from datetime import datetime
-from uuid import uuid4
 
 
 class LocalStorageProvider(FileStorageProvider):
@@ -13,24 +12,28 @@ class LocalStorageProvider(FileStorageProvider):
 
     def __init__(self, root_directory: Path) -> None:
         self._root_directory = root_directory
-
         self._root_directory.mkdir(
             parents=True,
             exist_ok=True,
         )
+
+    def _resolve_path(self, path: str | Path) -> Path:
+        """
+        Convert a string path to Path if necessary.
+        """
+        return path if isinstance(path, Path) else Path(path)
+
     def save(
-    self,
-    filename: str,
-    content: bytes,
+        self,
+        filename: str,
+        content: bytes,
     ) -> Path:
         """
         Save a file and return its storage path.
         """
 
-        # Extract file extension (.pdf, .docx, etc.)
         extension = Path(filename).suffix
 
-        # Create date-based directory
         today = datetime.now()
 
         directory = (
@@ -41,46 +44,52 @@ class LocalStorageProvider(FileStorageProvider):
         )
 
         directory.mkdir(
-        parents=True,
-        exist_ok=True,
+            parents=True,
+            exist_ok=True,
         )
 
-        # Generate unique filename
         stored_filename = f"{uuid4()}{extension}"
 
-        # Full file path
         file_path = directory / stored_filename
 
-        # Save file
         file_path.write_bytes(content)
 
         return file_path
+
     def exists(
-    self,
-    path: Path,
+        self,
+        path: str | Path,
     ) -> bool:
         """
         Check if a file exists.
         """
 
+        path = self._resolve_path(path)
+
         return path.exists()
+
     def delete(
-    self,
-    path: Path,
+        self,
+        path: str | Path,
     ) -> None:
         """
         Delete a file.
         """
 
+        path = self._resolve_path(path)
+
         if path.exists():
             path.unlink()
+
     def read(
-    self,
-    path: Path, 
+        self,
+        path: str | Path,
     ) -> bytes:
         """
         Read a file from local storage.
         """
+
+        path = self._resolve_path(path)
 
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")

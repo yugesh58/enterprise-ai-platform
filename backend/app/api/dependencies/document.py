@@ -1,5 +1,12 @@
 from fastapi import Depends
 
+from app.services.document.document_search_service import (
+    DocumentSearchService,
+)
+from app.services.document.document_chat_service import (
+    DocumentChatService,
+)
+
 from app.api.dependencies.repositories import (
     get_document_repository,
 )
@@ -81,10 +88,20 @@ def get_document_indexing_service(
         vector_provider=vector_provider,
     )
 
-    return DocumentIndexingService(
-        repository=repository,
-        storage=storage,
-        pdf_processing_service=PDFProcessingService(),
-        chunking_service=ChunkingService(),
+def get_document_search_service(
+    vector_provider: VectorProvider = Depends(
+        get_vector_provider
+    ),
+) -> DocumentSearchService:
+
+    return DocumentSearchService(
         vector_provider=vector_provider,
+    )
+
+def get_document_chat_service(
+    search_service=Depends(get_document_search_service),
+):
+
+    return DocumentChatService(
+        search_service=search_service,
     )

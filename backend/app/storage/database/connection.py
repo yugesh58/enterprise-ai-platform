@@ -1,12 +1,13 @@
-from pathlib import Path
-
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
-# Database file path
-DB_PATH = Path(__file__).parent / "company.db"
+from app.core.config import settings
 
-# SQLite connection URL
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,
+)
 
-# Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+
+def get_connection() -> Session:
+    return Session(engine)

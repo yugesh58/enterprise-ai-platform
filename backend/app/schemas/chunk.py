@@ -14,10 +14,7 @@ class ChunkMetadata(BaseModel):
 class DocumentChunk(BaseModel):
     """Represents a searchable document chunk."""
 
-    chunk_id: str
-
+    chunk_id: UUID
     document_id: UUID
-
     text: str
-
     metadata: ChunkMetadata
