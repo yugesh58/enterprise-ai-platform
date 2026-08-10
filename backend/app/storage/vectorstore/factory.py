@@ -13,15 +13,20 @@ class VectorStoreFactory:
 
         if cls._provider is None:
 
-            provider = settings.VECTOR_DB.lower()
+            provider_name = settings.VECTOR_DB.lower()
 
-            if provider == "qdrant":
-                cls._provider = QdrantProvider()
+            if provider_name == "qdrant":
+
+                provider = QdrantProvider()
+
             else:
+
                 raise ValueError(
-                    f"Unsupported vector provider: {provider}"
+                    f"Unsupported vector provider: {provider_name}"
                 )
 
-            cls._provider.connect()
+            provider.connect()
+
+            cls._provider = provider
 
         return cls._provider

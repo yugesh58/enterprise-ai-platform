@@ -1,17 +1,17 @@
 from sqlalchemy import (
-    Table,
-    Column,
-    String,
     BigInteger,
+    Column,
     DateTime,
-    text,
     Enum,
+    Index,
+    String,
+    Table,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.models.metadata import metadata
-
 from app.enums.document_status import DocumentStatus
+from app.models.metadata import metadata
 
 
 documents = Table(
@@ -19,10 +19,10 @@ documents = Table(
     metadata,
 
     Column(
-    "id",
-    UUID(as_uuid=True),
-    primary_key=True,
-    server_default=text("gen_random_uuid()"),
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
     ),
 
     Column(
@@ -50,13 +50,19 @@ documents = Table(
     ),
 
     Column(
-    "status",
-    Enum(
-        DocumentStatus,
-        name="document_status",
+        "content_hash",
+        String(64),
+        nullable=False,
     ),
-    nullable=False,
-    server_default=DocumentStatus.UPLOADED.value,
+
+    Column(
+        "status",
+        Enum(
+            DocumentStatus,
+            name="document_status",
+        ),
+        nullable=False,
+        server_default=DocumentStatus.UPLOADED.value,
     ),
 
     Column(
@@ -71,5 +77,11 @@ documents = Table(
         DateTime,
         server_default=text("CURRENT_TIMESTAMP"),
         nullable=False,
+    ),
+
+    Index(
+        "uq_documents_content_hash",
+        "content_hash",
+        unique=True,
     ),
 )

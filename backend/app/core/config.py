@@ -61,7 +61,14 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "enterprise_ai"
+
     VECTOR_DB: str = "qdrant"
+
+    QDRANT_VECTOR_SIZE: int = 1536
+    QDRANT_DISTANCE: str = "COSINE"
+
+    DOCUMENT_SEARCH_LIMIT: int = 20
+    DOCUMENT_MIN_SCORE: float = 0.35
 
     # ==========================================================
     # Redis

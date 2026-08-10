@@ -1,9 +1,12 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
     question: str
     top_k: int = 5
+    document_id: Optional[str] = None
 
 
 class SourceChunk(BaseModel):

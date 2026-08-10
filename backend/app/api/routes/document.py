@@ -131,4 +131,5 @@ def chat(
     return chat_service.chat(
         question=request.question,
         top_k=request.top_k,
+        document_id=request.document_id,
     )

@@ -25,13 +25,7 @@ class DocumentSearchService:
         document_id: Optional[str] = None,
     ) -> list[dict]:
 
-        print("\n" + "=" * 80)
-        print("DOCUMENT SEARCH")
-        print("=" * 80)
-        print(f"Query: {query}")
-
         query_embedding = self._embeddings.embed_query(query)
-        print("Query embedding dimension:", len(query_embedding))
 
         filters = None
 
@@ -40,15 +34,39 @@ class DocumentSearchService:
                 "document_id": document_id
             }
 
+        # Retrieve more candidates than required
         results = self._vector_provider.search(
             collection_name=settings.QDRANT_COLLECTION,
             query_vector=query_embedding,
-            limit=top_k,
+            limit=settings.DOCUMENT_SEARCH_LIMIT,
             filters=filters,
         )
 
-        print(f"Retrieved {len(results)} chunks")
-        for i, r in enumerate(results):
-            print(f"\nResult {i + 1}")
-            print(r)
-        return results
+        # Filter low-confidence results
+        results = [
+            result
+            for result in results
+            if result["score"] >= settings.DOCUMENT_MIN_SCORE
+        ]
+
+        # Remove duplicate chunks
+        seen = set()
+        unique_results = []
+
+        for result in results:
+
+            payload = result["payload"]
+
+            key = (
+                payload.get("document_id"),
+                payload.get("page_number"),
+                payload.get("text"),
+            )
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+            unique_results.append(result)
+
+        return unique_results[:top_k]

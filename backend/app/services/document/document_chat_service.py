@@ -1,75 +1,48 @@
 from app.ai.llm import provider
-from app.schemas.chat import ChatResponse, SourceChunk
-from app.services.document.document_search_service import (
-    DocumentSearchService,
+from app.prompts.document_chat_prompt import (
+    DOCUMENT_CHAT_PROMPT,
 )
-from app.prompts import document_chat_prompt
+from app.schemas.chat import ChatResponse
+from app.services.document.document_retriever_service import (
+    DocumentRetriever,
+)
 
 
 class DocumentChatService:
 
     def __init__(
         self,
-        search_service: DocumentSearchService,
-    ):
-        self._search_service = search_service
+        retriever: DocumentRetriever,
+    ) -> None:
+
+        self._retriever = retriever
 
     def chat(
         self,
         question: str,
         top_k: int = 5,
+        document_id: str | None = None,
     ) -> ChatResponse:
 
-        # -----------------------------------
-        # Retrieve context
-        # -----------------------------------
-
-        chunks = self._search_service.search(
+        context, sources = self._retriever.retrieve(
             query=question,
             top_k=top_k,
+            document_id=document_id,
         )
 
-        if not chunks:
+        if not context:
 
             return ChatResponse(
                 answer="I couldn't find any relevant information in the uploaded documents.",
                 sources=[],
             )
 
-        # -----------------------------------
-        # Build Context
-        # -----------------------------------
-
-        context = "\n\n".join(
-            chunk["payload"]["text"]
-            for chunk in chunks
+        prompt = DOCUMENT_CHAT_PROMPT.format(
+            context=context,
+            question=question,
         )
 
-        # -----------------------------------
-        # Prompt
-        # -----------------------------------
-
-        prompt = document_chat_prompt
-
-        # -----------------------------------
-        # Call LLM
-        # -----------------------------------
-
         response = provider.invoke(prompt)
-
-        # -----------------------------------
-        # Sources
-        # -----------------------------------
-
-        sources = [
-            SourceChunk(
-                source=chunk["payload"]["source"],
-                page_number=chunk["payload"]["page_number"],
-                score=chunk["score"],
-                text=chunk["payload"]["text"],
-            )
-            for chunk in chunks
-        ]
 
         return ChatResponse(
             answer=response.content,
