@@ -8,6 +8,7 @@ from app.core.config import settings
 
 from app.models.metadata import metadata
 import app.models.document
+import app.models.document_chunk
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

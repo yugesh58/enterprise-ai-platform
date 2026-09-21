@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
@@ -55,7 +55,6 @@ class QdrantProvider(VectorProvider):
             port=settings.QDRANT_PORT,
         )
 
-        # Fail fast if Qdrant is unavailable.
         self._client.get_collections()
 
         self._ensure_collection_exists(
@@ -296,6 +295,37 @@ class QdrantProvider(VectorProvider):
             points_selector=PointIdsList(
                 points=point_ids,
             ),
+        )
+
+    def delete_by_filter(
+        self,
+        collection_name: str,
+        filters: dict[str, Any],
+    ) -> None:
+        """
+        Delete all vectors matching the supplied payload filters.
+        """
+
+        self._ensure_connected()
+
+        if not filters:
+            return
+
+        query_filter = Filter(
+            must=[
+                FieldCondition(
+                    key=key,
+                    match=MatchValue(
+                        value=value,
+                    ),
+                )
+                for key, value in filters.items()
+            ]
+        )
+
+        self._client.delete(
+            collection_name=collection_name,
+            points_selector=query_filter,
         )
 
     # ==========================================================

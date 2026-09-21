@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 from app.storage.vectorstore.models.vector_point import VectorPoint
 
@@ -60,7 +60,13 @@ class VectorProvider(ABC):
     ) -> None:
         """Delete vectors."""
         pass
-
+    @abstractmethod
+    def delete_by_filter(
+      self,
+      collection_name: str,
+     filters: dict[str, Any],
+      ) -> None:
+       pass
     @abstractmethod
     def close(self) -> None:
         """Close the provider connection."""
