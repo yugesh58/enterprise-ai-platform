@@ -7,14 +7,13 @@ from app.storage.vectorstore.base import VectorProvider
 
 class DocumentSearchService:
     """
-    Performs semantic search over indexed documents.
+    Service responsible for semantic document retrieval.
     """
 
     def __init__(
         self,
         vector_provider: VectorProvider,
     ) -> None:
-
         self._vector_provider = vector_provider
         self._embeddings = get_embeddings()
 
@@ -23,18 +22,31 @@ class DocumentSearchService:
         query: str,
         top_k: int = 5,
         document_id: Optional[str] = None,
+        apply_threshold: bool = True,
     ) -> list[dict]:
+        """
+        Perform semantic search against the vector store.
+
+        Args:
+            query: User search query.
+            top_k: Number of results to return.
+            document_id: Optional document filter.
+            apply_threshold: Whether to apply the configured minimum
+                similarity score.
+
+        The hybrid retrieval layer can disable the threshold so that
+        low-scoring but potentially useful candidates are available
+        during fusion.
+        """
 
         query_embedding = self._embeddings.embed_query(query)
 
-        filters = None
+        filters = (
+            {"document_id": document_id}
+            if document_id
+            else None
+        )
 
-        if document_id:
-            filters = {
-                "document_id": document_id
-            }
-
-        # Retrieve more candidates than required
         results = self._vector_provider.search(
             collection_name=settings.QDRANT_COLLECTION,
             query_vector=query_embedding,
@@ -42,19 +54,17 @@ class DocumentSearchService:
             filters=filters,
         )
 
-        # Filter low-confidence results
-        results = [
-            result
-            for result in results
-            if result["score"] >= settings.DOCUMENT_MIN_SCORE
-        ]
+        if apply_threshold:
+            results = [
+                result
+                for result in results
+                if result["score"] >= settings.DOCUMENT_MIN_SCORE
+            ]
 
-        # Remove duplicate chunks
         seen = set()
         unique_results = []
 
         for result in results:
-
             payload = result["payload"]
 
             key = (
