@@ -1,6 +1,5 @@
 from typing import Dict
 
-from app.agents.analyst_agent import AnalystAgent
 from app.agents.base_agent import BaseAgent
 from app.agents.rag_agent import RAGAgent
 from app.agents.sql_agent import SQLAgent
@@ -15,8 +14,7 @@ class AgentRegistry:
     def __init__(self) -> None:
         self._agents: Dict[str, BaseAgent] = {
             AgentType.SQL: SQLAgent(),
-            #AgentType.RAG: RAGAgent(),
-            #AgentType.ANALYST: AnalystAgent(),
+            AgentType.RAG: RAGAgent(),
         }
 
     def get(self, name: str) -> BaseAgent:
@@ -25,6 +23,8 @@ class AgentRegistry:
         """
 
         if name not in self._agents:
-            raise ValueError(f"Unknown agent: {name}")
+            raise ValueError(
+                f"Unknown agent: {name}"
+            )
 
         return self._agents[name]

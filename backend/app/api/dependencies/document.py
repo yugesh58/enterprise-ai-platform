@@ -44,6 +44,12 @@ from app.services.document.pdf_processing_service import (
 from app.services.document.query_expansion_service import (
     QueryExpansionService,
 )
+from app.services.document.context_builder import (
+    DocumentContextBuilder,
+)
+from app.services.document.document_rag_service import (
+    DocumentRAGService,
+)
 
 
 def get_document_search_service() -> DocumentSearchService:
@@ -117,4 +123,10 @@ def get_document_indexing_service(
         pdf_processing_service=PDFProcessingService(),
         chunking_service=ChunkingService(),
         vector_provider=get_vector_provider(),
+    )
+
+def get_document_rag_service() -> DocumentRAGService:
+    return DocumentRAGService(
+        retriever=get_document_retriever(),
+        context_builder=DocumentContextBuilder(),
     )
