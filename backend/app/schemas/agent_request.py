@@ -14,7 +14,7 @@ class AgentRequest:
 
     context: RequestContext = field(default_factory=RequestContext)
 
-    chat_history: list[str] = field(default_factory=list)
+    chat_history: list[dict[str, str]] = field(default_factory=list)
 
     uploaded_files: list[Any] = field(default_factory=list)
 

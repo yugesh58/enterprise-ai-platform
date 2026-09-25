@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 from app.agents.base_agent import BaseAgent
 from app.core.enums import AgentType, ResponseStatus
 from app.schemas.agent_request import AgentRequest
@@ -81,6 +83,7 @@ class RAGAgent(BaseAgent):
             result = self._rag_service.answer(
                 question=request.question,
                 top_k=5,
+                chat_history=request.chat_history,
             )
 
             request.context.selected_agent = AgentType.RAG
@@ -125,3 +128,35 @@ class RAGAgent(BaseAgent):
                     "agent": AgentType.RAG,
                 },
             )
+
+    def stream(
+        self,
+        request: AgentRequest,
+    ) -> Iterator[str]:
+        """
+        Stream the RAG answer incrementally.
+        """
+
+        self.logger.info(
+            "Starting RAG Agent streaming"
+        )
+
+        try:
+            request.context.selected_agent = AgentType.RAG
+
+            for chunk in self._rag_service.stream(
+                question=request.question,
+                top_k=5,
+                chat_history=request.chat_history,
+            ):
+                yield chunk
+
+            self.logger.info(
+                "RAG Agent streaming completed"
+            )
+
+        except Exception:
+            self.logger.exception(
+                "RAG Agent streaming failed"
+            )
+            raise
