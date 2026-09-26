@@ -8,7 +8,7 @@ class DatabaseProvider(ABC):
     """
 
     @abstractmethod
-    def connect(self) -> None:
+    def connect(self):
         """Initialize the database connection."""
 
     @abstractmethod

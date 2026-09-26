@@ -1,52 +1,112 @@
-from app.storage.database.base import DatabaseProvider
-from app.storage.database.connection import engine
-from sqlalchemy import inspect
+from pathlib import Path
 from typing import Any
-from sqlalchemy import text
+
+from sqlalchemy import create_engine, inspect, text
+
+from app.storage.database.base import DatabaseProvider
 
 
+DB_PATH = Path(__file__).resolve().parents[1] / "company.db"
 
+sqlite_engine = create_engine(
+    f"sqlite:///{DB_PATH}",
+)
 
 
 class SQLiteProvider(DatabaseProvider):
-    def connect(self) -> None:
-        pass
+    """
+    SQLite database provider used by the SQL Agent.
+    """
 
-    def _execute_query(
-    self,
-    query: str,
-    params: dict[str, Any] | None = None,
-        ):
+    def connect(self):
+        """
+        Return a SQLAlchemy database connection.
+        """
+        return sqlite_engine.connect()
+
+    def execute(
+        self,
+        query: str,
+        params: dict[str, Any] | None = None,
+    ):
         params = params or {}
 
         with self.connect() as connection:
-            return connection.execute(text(query), params)
+            result = connection.execute(
+                text(query),
+                params,
+            )
+            connection.commit()
 
-    def execute(self, query: str, params: tuple | None = None):
-        return self._execute_query(query, params)
+            return result
 
-    def fetch_one(self, query: str, params: tuple | None = None):
-        result = self._execute_query(query, params)
-        row = result.fetchone()
-        return dict(row._mapping) if row else None
+    def fetch_one(
+        self,
+        query: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
 
-    def fetch_all(self, query: str, params: tuple | None = None):
-        result = self._execute_query(query, params)
-        return [dict(row._mapping) for row in result.fetchall()]
-        
-    def get_schema(self):
-        inspector = inspect(engine)
+        params = params or {}
+
+        with self.connect() as connection:
+            result = connection.execute(
+                text(query),
+                params,
+            )
+
+            row = result.fetchone()
+
+            if row is None:
+                return None
+
+            return dict(row._mapping)
+
+    def fetch_all(
+        self,
+        query: str,
+        params: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+
+        params = params or {}
+
+        with self.connect() as connection:
+            result = connection.execute(
+                text(query),
+                params,
+            )
+
+            return [
+                dict(row._mapping)
+                for row in result.fetchall()
+            ]
+
+    def get_schema(self) -> str:
+        """
+        Return a human-readable representation
+        of the SQLite database schema.
+        """
+
+        inspector = inspect(sqlite_engine)
 
         schema_info = []
 
-        tables = inspector.get_table_names()
+        for table in inspector.get_table_names():
 
-        for table in tables:
             columns = inspector.get_columns(table)
-            column_names = [column["name"] for column in columns]
-            schema_info.append(f"{table}({', '.join(column_names)})")
+
+            column_names = [
+                column["name"]
+                for column in columns
+            ]
+
+            schema_info.append(
+                f"{table}({', '.join(column_names)})"
+            )
 
         return "\n".join(schema_info)
 
     def close(self) -> None:
-        engine.dispose()
+        """
+        Dispose SQLite engine resources.
+        """
+        sqlite_engine.dispose()
