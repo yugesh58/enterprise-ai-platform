@@ -1,43 +1,76 @@
 from app.core.enums import ValidationStatus
 
 
+ALLOWED_START = "SELECT"
+
+BLOCKED_KEYWORDS = {
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "DROP",
+    "ALTER",
+    "TRUNCATE",
+    "CREATE",
+    "REPLACE",
+    "MERGE",
+    "UPSERT",
+    "GRANT",
+    "REVOKE",
+    "ATTACH",
+    "DETACH",
+    "VACUUM",
+    "PRAGMA",
+}
+
+
 def validate_sql_node(state):
     """
-    Validate the generated SQL query before execution.
+    Validate LLM-generated SQL before execution.
+
+    Policy:
+    - Exactly one SQL statement.
+    - Only SELECT statements are allowed.
+    - No write, DDL, or database administration operations.
     """
 
-    sql_query = state["sql_query"].strip()
+    sql_query = state.get("sql_query", "").strip()
 
-    # Prevent multiple SQL statements
-    if ";" in sql_query[:-1]:
+    if not sql_query:
+        return {
+            "validation_status": ValidationStatus.INVALID,
+            "validation_reason": "SQL query is empty.",
+        }
+
+    # Remove one optional trailing semicolon.
+    normalized_sql = sql_query.rstrip(";").strip()
+
+    # A semicolon anywhere else means multiple statements.
+    if ";" in normalized_sql:
         return {
             "validation_status": ValidationStatus.INVALID,
             "validation_reason": "Multiple SQL statements detected.",
         }
 
-    dangerous_keywords = [
-        "DROP",
-        "DELETE",
-        "TRUNCATE",
-        "UPDATE",
-        "ALTER",
-        "INSERT",
-    ]
+    sql_upper = normalized_sql.upper()
 
-    sql_upper = sql_query.upper()
-
-    for keyword in dangerous_keywords:
-        if keyword in sql_upper:
-            return {
-                "validation_status": ValidationStatus.INVALID,
-                "validation_reason": f"{keyword} statements are not allowed.",
-            }
-
-    if not sql_upper.startswith("SELECT"):
+    # Only SELECT queries are allowed.
+    if not sql_upper.startswith(ALLOWED_START):
         return {
             "validation_status": ValidationStatus.INVALID,
             "validation_reason": "Only SELECT statements are allowed.",
         }
+
+    # Block dangerous SQL operations.
+    tokens = sql_upper.replace("(", " ").replace(")", " ").split()
+
+    for keyword in BLOCKED_KEYWORDS:
+        if keyword in tokens:
+            return {
+                "validation_status": ValidationStatus.INVALID,
+                "validation_reason": (
+                    f"{keyword} statements are not allowed."
+                ),
+            }
 
     return {
         "validation_status": ValidationStatus.VALID,

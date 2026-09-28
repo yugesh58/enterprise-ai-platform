@@ -13,6 +13,24 @@ from app.workflows.sql.nodes.validate_sql import (
 )
 from app.workflows.sql.state import SQLState
 
+
+def execution_router(state):
+    """
+    Route the workflow after SQL execution.
+
+    Successful execution proceeds to summarization.
+    Database errors go back to SQL regeneration.
+    """
+
+    if not state.get("execution_error"):
+        return "summarize"
+
+    if state.get("retry_count", 0) < 2:
+        return "retry_sql"
+
+    return "end"
+
+
 graph_builder = StateGraph(SQLState)
 
 # Nodes
@@ -25,17 +43,13 @@ graph_builder.add_node("execute_sql", execute_sql_node)
 graph_builder.add_node("summarize", summarize_node)
 graph_builder.add_node("update_memory", update_memory_node)
 
-# Edges
+# Initial flow
 graph_builder.add_edge(START, "memory")
 graph_builder.add_edge("memory", "schema")
 graph_builder.add_edge("schema", "generate_sql")
 graph_builder.add_edge("generate_sql", "validate_sql")
-graph_builder.add_edge("retry_sql", "validate_sql")
-graph_builder.add_edge("execute_sql", "summarize")
-graph_builder.add_edge("summarize", "update_memory")
-graph_builder.add_edge("update_memory", END)
 
-# Conditional Routing
+# Validation routing
 graph_builder.add_conditional_edges(
     "validate_sql",
     validation_router,
@@ -44,6 +58,34 @@ graph_builder.add_conditional_edges(
         "retry_sql": "retry_sql",
         "end": END,
     },
+)
+
+# Retry always returns to validation
+graph_builder.add_edge(
+    "retry_sql",
+    "validate_sql",
+)
+
+# Execution routing
+graph_builder.add_conditional_edges(
+    "execute_sql",
+    execution_router,
+    {
+        "summarize": "summarize",
+        "retry_sql": "retry_sql",
+        "end": END,
+    },
+)
+
+# Successful completion
+graph_builder.add_edge(
+    "summarize",
+    "update_memory",
+)
+
+graph_builder.add_edge(
+    "update_memory",
+    END,
 )
 
 sql_graph = graph_builder.compile()

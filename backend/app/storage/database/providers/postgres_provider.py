@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 
 from app.core.config import settings
 from app.storage.database.base import DatabaseProvider
-from app.storage.database.registry import DatabaseRegistry
+
 
 
 
@@ -118,4 +118,3 @@ class PostgreSQLProvider(DatabaseProvider):
 
         return schema
 
-DatabaseRegistry.register("postgres", PostgreSQLProvider)

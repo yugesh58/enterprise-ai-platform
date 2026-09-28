@@ -1,6 +1,8 @@
-from app.storage.database.factory import DatabaseFactory
+from app.storage.database.providers.sqlite_provider import SQLiteProvider
+from app.storage.database.providers.postgres_provider import PostgreSQLProvider
 
-# Import providers so they register themselves
-import app.storage.database.providers.postgres_provider
+from app.storage.database.registry import DatabaseRegistry
 
-__all__ = ["DatabaseFactory"]
+
+DatabaseRegistry.register("sqlite", SQLiteProvider)
+DatabaseRegistry.register("postgres", PostgreSQLProvider)
