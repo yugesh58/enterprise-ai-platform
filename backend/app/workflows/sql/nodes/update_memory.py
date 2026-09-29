@@ -1,4 +1,4 @@
-from app.storage.memory.conversation_memory import add_to_memory
+from app.storage.memory.factory import get_memory_provider
 
 
 def update_memory_node(state):
@@ -6,9 +6,19 @@ def update_memory_node(state):
     Store the successful interaction in conversation memory.
     """
 
-    add_to_memory(
+    memory_provider = get_memory_provider()
+
+    conversation_id = state["conversation_id"]
+
+    memory_provider.add_message(
+        conversation_id,
+        "user",
         state["question"],
-        state["sql_query"],
+    )
+
+    memory_provider.add_message(
+        conversation_id,
+        "assistant",
         state["summary"],
     )
 

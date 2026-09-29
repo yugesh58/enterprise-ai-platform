@@ -2,19 +2,33 @@ from app.ai.llm import provider
 from app.prompts.sql_prompt import SQL_SYSTEM_PROMPT
 
 
-def generate_sql(user_question: str, schema: str, memory: list):
+def generate_sql(
+    user_question: str,
+    schema: str,
+    memory: list,
+):
+    """
+    Generate SQL using database schema and conversation history.
+    """
 
-    recent_memory = memory[-3:]
+    recent_memory = memory[-6:]
 
     memory_text = ""
 
     for item in recent_memory:
-        memory_text += f"""
-User:
-{item.get("question", "")}
+        role = item.get("role", "")
+        content = item.get("content", "")
 
+        if role == "user":
+            memory_text += f"""
+User:
+{content}
+
+"""
+        elif role == "assistant":
+            memory_text += f"""
 Assistant:
-{item.get("summary", "")}
+{content}
 
 """
 
@@ -57,8 +71,11 @@ Instructions:
 
     sql_query = response.content.strip()
 
-    sql_query = sql_query.replace("```sql", "")
+    sql_query = (
+        sql_query
+        .replace("```sql", "")
+        .replace("```", "")
+        .strip()
+    )
 
-    sql_query = sql_query.replace("```", "")
-
-    return sql_query.strip()
+    return sql_query

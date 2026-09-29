@@ -1,11 +1,20 @@
-from app.storage.memory.conversation_memory import get_memory
+from app.storage.memory.factory import get_memory_provider
 
 
 def retrieve_memory_node(state):
     """
-    Retrieve conversation memory.
+    Retrieve conversation history for the current conversation.
     """
 
-    memory = get_memory()
+    memory_provider = get_memory_provider()
 
-    return {"memory": memory}
+    conversation_id = state["conversation_id"]
+
+    memory = memory_provider.get_history(
+        conversation_id=conversation_id,
+        limit=10,
+    )
+
+    return {
+        "memory": memory,
+    }

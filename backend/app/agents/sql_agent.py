@@ -18,8 +18,14 @@ class SQLAgent(BaseAgent):
 
         self.logger.info("Executing SQL Agent")
 
+        conversation_id = request.attributes.get(
+            "conversation_id",
+            "default",
+        )
+
         graph_response = sql_graph.invoke(
             {
+                "conversation_id": conversation_id,
                 "question": request.question,
                 "context": request.context,
                 "retry_count": 0,
@@ -31,6 +37,6 @@ class SQLAgent(BaseAgent):
         self.logger.info("SQL Agent execution completed")
 
         return AgentResponse(
-            answer=graph_response.get("answer", ""),
+            answer=graph_response.get("summary", ""),
             data=graph_response,
         )
