@@ -1,0 +1,871 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.5">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="en"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;AI Engineer System Design - Day 8&lt;/title&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>body {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>line-height: 1.7;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>max-width: 950px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 0 auto;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 40px 25px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #222;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #f7f7f7;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.container {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: white;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 45px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 14px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>h1 {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 36px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 5px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>h2 {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 45px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 2px solid #eee;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding-bottom: 8px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>h3 {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 30px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.subtitle {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #666;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 18px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 35px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.concept {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #f5f7fa;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 20px 0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.important {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-left: 5px solid #333;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 15px 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #fafafa;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 20px 0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.architecture {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #111;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #fff;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-family: monospace;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>white-space: pre-wrap;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>overflow-x: auto;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.question {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #f1f5f9;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 25px 0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>code {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #eee;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 2px 5px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 4px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>li {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 8px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.summary {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #eef2ff;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 25px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 12px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 35px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;div class="container"&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h1&gt;Day 8 — Database Scaling &amp; Replication&lt;/h1&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="subtitle"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>AI Engineer System Design — Beginner → Advanced</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;1. Why Databases Become a Bottleneck&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>In a scalable AI application, the application layer can often be</p>
+<p class="p1"><span class="Apple-converted-space">        </span>horizontally scaled by adding more FastAPI instances.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>However, the database can eventually become the bottleneck.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">10,000 requests/sec</p>
+<p class="p1"><span class="Apple-converted-space">        </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">     </span>FastAPI</p>
+<p class="p1"><span class="Apple-converted-space">        </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">   </span>PostgreSQL</p>
+<p class="p1"><span class="Apple-converted-space">        </span>↓</p>
+<p class="p1">CPU = 95%</p>
+<p class="p1">Connections = 4,000</p>
+<p class="p1">Latency = 2 seconds</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Adding more FastAPI servers will not solve this problem if PostgreSQL</p>
+<p class="p1"><span class="Apple-converted-space">        </span>is the actual bottleneck.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="important"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Key principle:&lt;/strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Scale the bottleneck, not the component that is easiest to scale.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;2. Read-Heavy vs Write-Heavy Workloads&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>One of the first things to identify in a system design interview is</p>
+<p class="p1"><span class="Apple-converted-space">        </span>whether the workload is read-heavy, write-heavy, or balanced.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="concept"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Read-heavy example:&lt;/strong&gt;&lt;br&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>10,000 DB operations/sec&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>9,000 reads&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>1,000 writes</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>For a read-heavy system, read replicas are often an effective scaling</p>
+<p class="p1"><span class="Apple-converted-space">        </span>strategy.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>Primary</p>
+<p class="p1"><span class="Apple-converted-space">               </span>/ <span class="Apple-converted-space">  </span>| <span class="Apple-converted-space">  </span>\</p>
+<p class="p1"><span class="Apple-converted-space">              </span>↓<span class="Apple-converted-space">    </span>↓<span class="Apple-converted-space">    </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">             </span>R1 <span class="Apple-converted-space">  </span>R2<span class="Apple-converted-space">    </span>R3</p>
+<p class="p2"><br></p>
+<p class="p1">Primary → Writes</p>
+<p class="p1">R1/R2/R3 → Reads</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;3. Database Replication&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Replication means maintaining copies of database data on other</p>
+<p class="p1"><span class="Apple-converted-space">        </span>database servers.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>PostgreSQL</p>
+<p class="p1"><span class="Apple-converted-space">                   </span>Primary</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>/ <span class="Apple-converted-space">  </span>| <span class="Apple-converted-space">  </span>\</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>↓<span class="Apple-converted-space">    </span>↓<span class="Apple-converted-space">    </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">                </span>R1 <span class="Apple-converted-space">  </span>R2<span class="Apple-converted-space">    </span>R3</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>The primary database generally handles writes while replicas can</p>
+<p class="p1"><span class="Apple-converted-space">        </span>handle read traffic.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>This allows read traffic to be distributed across multiple machines.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;4. Asynchronous vs Synchronous Replication&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Asynchronous Replication&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>With asynchronous replication, the primary can return a response</p>
+<p class="p1"><span class="Apple-converted-space">        </span>without waiting for every replica to acknowledge the write.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Application</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Primary</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Response returned</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Replicas catch up</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;&lt;strong&gt;Advantages:&lt;/strong&gt;&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Lower write latency&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Higher throughput&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Better scalability&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;&lt;strong&gt;Disadvantage:&lt;/strong&gt;&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Replicas can temporarily contain stale data.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Synchronous Replication&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>With synchronous replication, the primary waits for the required</p>
+<p class="p1"><span class="Apple-converted-space">        </span>replica acknowledgement before completing the operation.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Application</p>
+<p class="p1"><span class="Apple-converted-space">      </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">   </span>Primary</p>
+<p class="p1"><span class="Apple-converted-space">      </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">   </span>Replica</p>
+<p class="p1"><span class="Apple-converted-space">      </span>↓</p>
+<p class="p1">Acknowledgement</p>
+<p class="p1"><span class="Apple-converted-space">      </span>↓</p>
+<p class="p1"><span class="Apple-converted-space"> </span>Response</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;&lt;strong&gt;Advantages:&lt;/strong&gt;&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Stronger consistency&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Lower chance of losing acknowledged data depending on configuration&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;&lt;strong&gt;Disadvantages:&lt;/strong&gt;&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Higher latency&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;More coordination&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Potential availability impact if required replicas are unavailable&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;5. Replication Lag&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Replication lag occurs when a replica has not yet caught up with the</p>
+<p class="p1"><span class="Apple-converted-space">        </span>primary.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Primary:</p>
+<p class="p2"><br></p>
+<p class="p1">Message 1</p>
+<p class="p1">Message 2</p>
+<p class="p1">Message 3</p>
+<p class="p1">Message 4</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1">Replica:</p>
+<p class="p2"><br></p>
+<p class="p1">Message 1</p>
+<p class="p1">Message 2</p>
+<p class="p1">Message 3</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>The replica is missing Message 4.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>The difference between the primary and replica state is replication</p>
+<p class="p1"><span class="Apple-converted-space">        </span>lag.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Why is this important for AI systems?&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Consider an AI chat application.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">User:</p>
+<p class="p1">"Remember that my preferred language is Python."</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>↓</p>
+<p class="p2"><br></p>
+<p class="p1">Write → Primary</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>↓</p>
+<p class="p2"><br></p>
+<p class="p1">Immediately:</p>
+<p class="p2"><br></p>
+<p class="p1">User:</p>
+<p class="p1">"What programming language do I prefer?"</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>↓</p>
+<p class="p2"><br></p>
+<p class="p1">Read → Replica</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>If the replica has not caught up, the AI system could retrieve stale</p>
+<p class="p1"><span class="Apple-converted-space">        </span>conversation information and generate an incorrect response.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;6. Read-After-Write Consistency&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Read-after-write consistency means that after a user successfully</p>
+<p class="p1"><span class="Apple-converted-space">        </span>performs a write, their subsequent read should reflect that write.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="important"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Example:&lt;/strong&gt;&lt;br&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>User writes X → User immediately reads X&lt;br&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>The user expects the read to contain the latest value of X.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>With asynchronous replicas, this guarantee is not automatically</p>
+<p class="p1"><span class="Apple-converted-space">        </span>provided.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;7. How Can We Solve Read-After-Write Problems?&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Option 1 — Read From Primary&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Write → Primary</p>
+<p class="p2"><br></p>
+<p class="p1">Critical Read → Primary</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>This provides strong consistency but increases the load on the</p>
+<p class="p1"><span class="Apple-converted-space">        </span>primary.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Option 2 — Session Stickiness&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>After a user writes, subsequent reads can temporarily be routed to</p>
+<p class="p1"><span class="Apple-converted-space">        </span>the primary.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">User</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">Primary</p>
+<p class="p2"><br></p>
+<p class="p1">Write</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">Primary</p>
+<p class="p2"><br></p>
+<p class="p1">Subsequent reads</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">Primary</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Option 3 — Lag-Aware Routing&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Monitor the replication lag of every replica.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Replica 1 → 5 seconds behind <span class="Apple-converted-space">  </span>→ ❌ Don't use</p>
+<p class="p2"><br></p>
+<p class="p1">Replica 2 → 100 ms behind<span class="Apple-converted-space">      </span>→ ✅ Use</p>
+<p class="p2"><br></p>
+<p class="p1">Replica 3 → 50 ms behind <span class="Apple-converted-space">      </span>→ ✅ Use</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>If the system requires data to be no more than one second stale,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Replica 1 should not receive that read.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Option 4 — Wait for Replication&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>The system can wait until the replica catches up before serving the</p>
+<p class="p1"><span class="Apple-converted-space">        </span>read.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>This improves consistency but increases latency.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;8. Connection Pooling&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Creating a new database connection for every request is expensive.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Request</p>
+<p class="p1"><span class="Apple-converted-space">   </span>↓</p>
+<p class="p1">Create connection</p>
+<p class="p1"><span class="Apple-converted-space">   </span>↓</p>
+<p class="p1">Query</p>
+<p class="p1"><span class="Apple-converted-space">   </span>↓</p>
+<p class="p1">Close connection</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Instead, we can maintain a pool of reusable connections.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">FastAPI</p>
+<p class="p1"><span class="Apple-converted-space">   </span>↓</p>
+<p class="p1">Connection Pool</p>
+<p class="p1"><span class="Apple-converted-space">   </span>↓</p>
+<p class="p1">┌────┬────┬────┬────┐</p>
+<p class="p1"><span class="Apple-converted-space"> </span>C1 <span class="Apple-converted-space">  </span>C2 <span class="Apple-converted-space">  </span>C3 <span class="Apple-converted-space">  </span>C4</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Connections can be reused across requests.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="important"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Important:&lt;/strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Increasing the connection pool size does not automatically increase</p>
+<p class="p1"><span class="Apple-converted-space">        </span>database capacity.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>If PostgreSQL is already CPU-bound, increasing connections can create</p>
+<p class="p1"><span class="Apple-converted-space">        </span>more contention and potentially make performance worse.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;9. Database Partitioning&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Suppose an AI chat application has billions of messages.</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Managing the entire dataset as one huge table can become difficult.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Partitioning divides a large logical table into smaller physical</p>
+<p class="p1"><span class="Apple-converted-space">        </span>pieces.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">messages</p>
+<p class="p1"><span class="Apple-converted-space">   </span>├── messages_2025</p>
+<p class="p1"><span class="Apple-converted-space">   </span>├── messages_2026</p>
+<p class="p1"><span class="Apple-converted-space">   </span>└── messages_2027</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Partitioning can also be based on other logical criteria depending</p>
+<p class="p1"><span class="Apple-converted-space">        </span>on the access pattern.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;10. Partitioning vs Sharding&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Partitioning&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Partitioning generally divides data within the database system.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">One PostgreSQL system</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>messages</p>
+<p class="p1"><span class="Apple-converted-space">       </span>/ <span class="Apple-converted-space">  </span>| <span class="Apple-converted-space">  </span>\</p>
+<p class="p1"><span class="Apple-converted-space">      </span>P1 <span class="Apple-converted-space">  </span>P2 <span class="Apple-converted-space">  </span>P3</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Sharding&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Sharding distributes data across multiple database systems.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>Application</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">                </span>Shard Router</p>
+<p class="p1"><span class="Apple-converted-space">              </span>/<span class="Apple-converted-space">      </span>|<span class="Apple-converted-space">      </span>\</p>
+<p class="p1"><span class="Apple-converted-space">             </span>↓ <span class="Apple-converted-space">      </span>↓ <span class="Apple-converted-space">      </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">          </span>DB-1 <span class="Apple-converted-space">    </span>DB-2 <span class="Apple-converted-space">    </span>DB-3</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;11. Choosing a Shard Key&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Suppose we are building a large AI chat system.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>One possible shard key is:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="concept"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;user_id&lt;/strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>This can work well when most queries are scoped to a particular user.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">User 101 → DB1</p>
+<p class="p1">User 102 → DB2</p>
+<p class="p1">User 103 → DB3</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>However, we need to be careful about users with extremely high</p>
+<p class="p1"><span class="Apple-converted-space">        </span>traffic.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">User A → 10 million requests</p>
+<p class="p2"><br></p>
+<p class="p1">Other users → 100 requests each</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>This can create a hot shard.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;12. Characteristics of a Good Shard Key&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;High Cardinality&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>A good shard key should have many possible values.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>user_id is generally more suitable than country because a small</p>
+<p class="p1"><span class="Apple-converted-space">        </span>number of countries could contain a very large percentage of users.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Even Distribution&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Ideally traffic should be distributed relatively evenly.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Shard 1 → ~33%</p>
+<p class="p1">Shard 2 → ~33%</p>
+<p class="p1">Shard 3 → ~33%</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Avoid situations such as:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Shard 1 → 80%</p>
+<p class="p1">Shard 2 → 10%</p>
+<p class="p1">Shard 3 → 10%</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Query Locality&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Queries should ideally be able to find the required data without</p>
+<p class="p1"><span class="Apple-converted-space">        </span>contacting every shard.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;13. Why Don't We Immediately Shard Everything?&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Sharding provides scalability but introduces significant complexity.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Cross-shard queries&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Distributed transactions&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Rebalancing&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Hot shards&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;More complicated backups&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;More complicated monitoring&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;More complicated debugging&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Data migration&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="important"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Principle:&lt;/strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Don't introduce sharding until simpler scaling techniques are</p>
+<p class="p1"><span class="Apple-converted-space">        </span>insufficient.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;14. Database Scaling Progression&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">Slow Query</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Optimize Query</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Indexes</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Connection Pooling</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Redis Cache</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Read Replicas</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Partitioning</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Sharding</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Not every system needs to reach sharding.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;15. Database Scaling in an AI System&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Consider an AI chat application:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">User</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">API Gateway</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">Load Balancer</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">FastAPI</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">Redis</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">PostgreSQL</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">Qdrant</p>
+<p class="p1"><span class="Apple-converted-space"> </span>↓</p>
+<p class="p1">LLM</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Database scaling might look like:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>FastAPI</p>
+<p class="p1"><span class="Apple-converted-space">                       </span>|</p>
+<p class="p1"><span class="Apple-converted-space">             </span>┌─────────┴─────────┐</p>
+<p class="p1"><span class="Apple-converted-space">             </span>↓ <span class="Apple-converted-space">                  </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">          </span>Writes <span class="Apple-converted-space">              </span>Reads</p>
+<p class="p1"><span class="Apple-converted-space">             </span>↓ <span class="Apple-converted-space">                  </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">          </span>Primary <span class="Apple-converted-space">      </span>┌────────┼────────┐</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>↓<span class="Apple-converted-space">        </span>↓<span class="Apple-converted-space">        </span>↓</p>
+<p class="p1"><span class="Apple-converted-space">                       </span>R1 <span class="Apple-converted-space">      </span>R2 <span class="Apple-converted-space">      </span>R3</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>The AI system can then use PostgreSQL for conversation and relational</p>
+<p class="p1"><span class="Apple-converted-space">        </span>data, while Qdrant handles vector retrieval.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="architecture"&gt;</p>
+<p class="p1">User Query</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">FastAPI</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Redis</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">PostgreSQL → Conversation History</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Qdrant → Relevant Documents</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Reranker</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">Prompt Construction</p>
+<p class="p1"><span class="Apple-converted-space">    </span>↓</p>
+<p class="p1">LLM</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;16. How to Approach Database Questions in an Interview&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>When an interviewer says:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="concept"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>"Your database is becoming a bottleneck. What would you do?"</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Do not immediately say "I'll add replicas."</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Step 1 — Identify the Workload&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Read-heavy?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Write-heavy?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Mixed?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Step 2 — Identify the Bottleneck&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;CPU?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Memory?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Disk I/O?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Connections?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Slow queries?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Lock contention?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Step 3 — Optimize First&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Query optimization&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Indexes&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Connection pooling&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Caching&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Step 4 — Scale&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Read replicas&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Partitioning&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Sharding&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Step 5 — Consider Consistency&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Ask:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="important"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Can the system tolerate stale reads?</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>If yes, replicas may be appropriate.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>If no, primary reads or consistency-aware routing may be necessary.</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Step 6 — Consider AI-Specific Requirements&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Does conversation history need strong consistency?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Can RAG metadata be eventually consistent?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;How fresh does the knowledge base need to be?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Can LLM responses be cached?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;li&gt;Can requests be processed asynchronously?&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;17. Day 8 Key Concepts&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="summary"&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h3&gt;Database Scaling&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>Optimize → Index → Pool → Cache → Replicate → Partition → Shard</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h3&gt;Replication&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>Primary → Writes&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>Replicas → Reads</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h3&gt;Important Problems&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;li&gt;Replication lag&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;li&gt;Read-after-write consistency&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;li&gt;Hot shards&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;li&gt;Connection exhaustion&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;li&gt;Lock contention&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/ul&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h3&gt;Most Important Principle&lt;/h3&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>First identify the workload and bottleneck.</p>
+<p class="p1"><span class="Apple-converted-space">                </span>Then choose the simplest architecture that solves the problem.</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;18. Day 8 Interview Questions&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="question"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Question 1:&lt;/strong&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>What is the difference between replication, partitioning and sharding?</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="question"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Question 2:&lt;/strong&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Why can adding more database connections actually make performance worse?</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="question"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;strong&gt;Question 3:&lt;/strong&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>If an AI chat system requires the user to immediately see their latest</p>
+<p class="p1"><span class="Apple-converted-space">        </span>message, how would you handle read-after-write consistency?</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>

@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 1800
     DATABASE_ECHO: bool = False
+    SQL_MAX_RESULT_ROWS: int = 100
 
     # ==========================================================
     # Qdrant
