@@ -4,11 +4,11 @@ from app.prompts.sql_prompt import SQL_SYSTEM_PROMPT
 
 def generate_sql(
     user_question: str,
-    schema: str,
+    schema: dict,
     memory: list,
 ):
     """
-    Generate SQL using database schema and conversation history.
+    Generate PostgreSQL SQL using database schema and conversation history.
     """
 
     recent_memory = memory[-6:]
@@ -62,9 +62,15 @@ Instructions:
 
 3. Never treat pronouns as literal database values.
 
-4. Generate ONLY valid SQLite SELECT statements.
+4. Generate ONLY valid PostgreSQL SELECT statements.
 
-5. Return ONLY SQL.
+5. Use ONLY tables and columns present in the provided schema.
+
+6. Use foreign-key relationships from the schema when generating JOINs.
+
+7. Generate exactly ONE SQL statement.
+
+8. Return ONLY SQL.
 """
 
     response = provider.invoke(prompt)

@@ -28,3 +28,10 @@ class ResponseStatus(StrEnum):
 class ValidationStatus(StrEnum):
     VALID = "valid"
     INVALID = "invalid"
+
+
+class ExecutionErrorType(StrEnum):
+    TIMEOUT = "timeout"
+    PERMISSION = "permission"
+    DATABASE = "database"
+    UNKNOWN = "unknown"

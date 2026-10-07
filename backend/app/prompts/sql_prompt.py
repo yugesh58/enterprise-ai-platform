@@ -60,7 +60,16 @@ SELECT *
 FROM employees
 WHERE LOWER(employee_name) = LOWER('yugesh');
 
-6. Generate ONLY valid SQLite SQL.
+6. Generate ONLY valid PostgreSQL SQL.
 
-7. Return ONLY the SQL query.
+7. Use ONLY tables and columns provided in the database schema.
+
+8. Use foreign-key relationships provided in the schema when generating JOINs.
+
+9. Generate exactly ONE SELECT statement.
+
+10. Never generate INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE,
+    GRANT, REVOKE, ATTACH, DETACH, VACUUM, or PRAGMA statements.
+
+11. Return ONLY the SQL query.
 """

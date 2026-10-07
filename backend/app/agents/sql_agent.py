@@ -1,3 +1,5 @@
+import time
+
 from app.agents.base_agent import BaseAgent
 from app.schemas.agent_request import AgentRequest
 from app.schemas.agent_response import AgentResponse
@@ -23,6 +25,8 @@ class SQLAgent(BaseAgent):
             "default",
         )
 
+        start_time = time.perf_counter()
+
         graph_response = sql_graph.invoke(
             {
                 "conversation_id": conversation_id,
@@ -32,9 +36,20 @@ class SQLAgent(BaseAgent):
             }
         )
 
+        total_latency_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        # Store total end-to-end latency.
+        graph_response["total_latency_ms"] = total_latency_ms
+
         request.context.selected_agent = AgentType.SQL
 
-        self.logger.info("SQL Agent execution completed")
+        self.logger.info(
+            "SQL Agent execution completed | "
+            "total_latency_ms=%.2f",
+            total_latency_ms,
+        )
 
         return AgentResponse(
             answer=graph_response.get("summary", ""),

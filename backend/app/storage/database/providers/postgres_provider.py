@@ -1,4 +1,5 @@
 from typing import Any
+from unittest import result
 
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine import Engine
@@ -69,19 +70,29 @@ class PostgreSQLProvider(DatabaseProvider):
             self._engine = None
 
     def fetch_all(
-    self,
-    query: str,
-    params: dict[str, Any] | None = None,
+        self,
+        query: str,
+        params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
 
         self.connect()
 
         assert self._engine is not None
 
-        with self._engine.connect() as connection:
-            result = connection.execute(text(query), params or {})
+        with self._engine.begin() as connection:
+            connection.execute(
+                text(
+                f"SET LOCAL statement_timeout = "
+                f"{settings.SQL_QUERY_TIMEOUT_MS}"
+                )
+            )
 
-            return [dict(row) for row in result.mappings().all()]
+            result = connection.execute(
+            text(query),
+            params or {},
+          )
+
+        return [dict(row) for row in result.mappings().all()]
     def get_schema(self) -> dict[str, Any]:
         """
          Returns complete database schema metadata.

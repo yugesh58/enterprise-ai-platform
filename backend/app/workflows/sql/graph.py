@@ -15,21 +15,21 @@ from app.workflows.sql.state import SQLState
 
 
 def execution_router(state):
-    """
-    Route the workflow after SQL execution.
-
-    Successful execution proceeds to summarization.
-    Database errors go back to SQL regeneration.
-    """
-
     if not state.get("execution_error"):
         return "summarize"
+
+    error_type = state.get("error_type")
+
+    if error_type == "timeout":
+        return "end"
+
+    if error_type == "permission":
+        return "end"
 
     if state.get("retry_count", 0) < 2:
         return "retry_sql"
 
     return "end"
-
 
 graph_builder = StateGraph(SQLState)
 

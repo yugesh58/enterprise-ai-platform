@@ -1,7 +1,7 @@
+import time
+
 from app.core.enums import ValidationStatus
 
-
-ALLOWED_START = "SELECT"
 
 BLOCKED_KEYWORDS = {
     "INSERT",
@@ -29,53 +29,77 @@ def validate_sql_node(state):
 
     Policy:
     - Exactly one SQL statement.
-    - Only SELECT statements are allowed.
+    - Only SELECT/WITH read queries are allowed.
     - No write, DDL, or database administration operations.
+    - SQL comments are not allowed.
     """
+
+    start_time = time.perf_counter()
 
     sql_query = state.get("sql_query", "").strip()
 
-    if not sql_query:
+    def result(status, reason):
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+
         return {
-            "validation_status": ValidationStatus.INVALID,
-            "validation_reason": "SQL query is empty.",
+            "validation_status": status,
+            "validation_reason": reason,
+            "sql_validation_ms": elapsed_ms,
         }
 
-    # Remove one optional trailing semicolon.
+    if not sql_query:
+        return result(
+            ValidationStatus.INVALID,
+            "SQL query is empty.",
+        )
+
     normalized_sql = sql_query.rstrip(";").strip()
 
-    # A semicolon anywhere else means multiple statements.
+    if (
+        "--" in normalized_sql
+        or "/*" in normalized_sql
+        or "*/" in normalized_sql
+    ):
+        return result(
+            ValidationStatus.INVALID,
+            "SQL comments are not allowed.",
+        )
+
     if ";" in normalized_sql:
-        return {
-            "validation_status": ValidationStatus.INVALID,
-            "validation_reason": "Multiple SQL statements detected.",
-        }
+        return result(
+            ValidationStatus.INVALID,
+            "Multiple SQL statements detected.",
+        )
 
     sql_upper = normalized_sql.upper()
 
-    # Only SELECT queries are allowed.
-    if not sql_upper.startswith(ALLOWED_START):
-        return {
-            "validation_status": ValidationStatus.INVALID,
-            "validation_reason": "Only SELECT statements are allowed.",
-        }
+    if not (
+        sql_upper.startswith("SELECT")
+        or sql_upper.startswith("WITH")
+    ):
+        return result(
+            ValidationStatus.INVALID,
+            "Only SELECT statements are allowed.",
+        )
 
-    # Block dangerous SQL operations.
-    tokens = sql_upper.replace("(", " ").replace(")", " ").split()
+    tokens = (
+        sql_upper
+        .replace("(", " ")
+        .replace(")", " ")
+        .split()
+    )
 
     for keyword in BLOCKED_KEYWORDS:
         if keyword in tokens:
-            return {
-                "validation_status": ValidationStatus.INVALID,
-                "validation_reason": (
-                    f"{keyword} statements are not allowed."
-                ),
-            }
+            return result(
+                ValidationStatus.INVALID,
+                f"{keyword} statements are not allowed.",
+            )
 
-    return {
-        "validation_status": ValidationStatus.VALID,
-        "validation_reason": "",
-    }
+    return result(
+        ValidationStatus.VALID,
+        "",
+    )
 
 
 def validation_router(state):

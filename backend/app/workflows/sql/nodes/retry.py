@@ -12,6 +12,7 @@ def regenerate_sql_node(state):
 
     validation_reason = state.get("validation_reason", "")
     execution_error = state.get("execution_error", "")
+    error_type = state.get("error_type")
 
     retry_prompt = f"""
 The previous SQL query could not be completed.
@@ -22,6 +23,9 @@ Validation Error:
 Database Execution Error:
 {execution_error}
 
+Execution Error Type:
+{error_type}
+
 Database Schema:
 {schema}
 
@@ -31,11 +35,10 @@ Conversation History:
 User Question:
 {question}
 
-Your task is to generate a corrected SQL query that answers
-the user's question.
+Generate a corrected SQL query that answers the user's question.
 
 Rules:
-1. Generate exactly ONE SQLite SELECT statement.
+1. Generate exactly ONE PostgreSQL SELECT statement.
 2. Use ONLY tables and columns present in the database schema.
 3. Do NOT use INSERT.
 4. Do NOT use UPDATE.
