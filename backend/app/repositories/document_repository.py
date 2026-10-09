@@ -1,3 +1,4 @@
+
 from uuid import UUID
 
 from sqlalchemy import delete, insert, select, update
@@ -8,9 +9,7 @@ from app.models.document import documents
 
 
 class DocumentRepository:
-    """
-    Repository responsible for CRUD operations on documents.
-    """
+    """Repository responsible for CRUD operations on documents."""
 
     def __init__(self, connection: Session) -> None:
         self._connection = connection
@@ -21,17 +20,9 @@ class DocumentRepository:
         content_type: str,
         file_size: int,
         storage_path: str,
+        content_hash: str,
     ) -> UUID:
-        """
-        Create a new document record.
-        """
-
-        print("\n" + "=" * 80)
-        print("DOCUMENT CREATE")
-        print("=" * 80)
-        print(f"Database : {self._connection.bind.url}")
-        print(f"Filename : {filename}")
-        print(f"Storage  : {storage_path}")
+        """Create a new document record."""
 
         statement = (
             insert(documents)
@@ -40,78 +31,58 @@ class DocumentRepository:
                 content_type=content_type,
                 file_size=file_size,
                 storage_path=storage_path,
+                content_hash=content_hash,
             )
             .returning(documents.c.id)
         )
 
-        result = self._connection.execute(statement)
+        try:
+            result = self._connection.execute(statement)
+            document_id = result.scalar_one()
+            self._connection.commit()
+            return document_id
+        except Exception:
+            self._connection.rollback()
+            raise
 
-        document_id = result.scalar_one()
-
-        print(f"Generated ID : {document_id}")
-
-        self._connection.commit()
-
-        print("✅ INSERT COMMITTED")
-
-        return document_id
-
-    def get_by_id(
-        self,
-        document_id: UUID,
-    ) -> dict | None:
-
-        print(f"\nLooking for document: {document_id}")
-
+    def get_by_id(self, document_id: UUID) -> dict | None:
         statement = (
             select(documents)
             .where(documents.c.id == document_id)
         )
 
         result = self._connection.execute(statement)
-
         row = result.mappings().first()
 
-        if row is None:
-            print("❌ Document NOT FOUND")
-            return None
-
-        print("✅ Document FOUND")
-
-        return dict(row)
+        return dict(row) if row is not None else None
 
     def update_status(
         self,
         document_id: UUID,
         status: DocumentStatus,
     ) -> None:
-
-        print(f"\nUpdating status -> {status}")
-
         statement = (
             update(documents)
             .where(documents.c.id == document_id)
             .values(status=status)
         )
 
-        self._connection.execute(statement)
-        self._connection.commit()
+        try:
+            self._connection.execute(statement)
+            self._connection.commit()
+        except Exception:
+            self._connection.rollback()
+            raise
 
-        print("✅ STATUS UPDATED")
-
-    def delete(
-        self,
-        document_id: UUID,
-    ) -> None:
-
-        print(f"\nDeleting document: {document_id}")
-
+    def delete(self, document_id: UUID) -> None:
         statement = (
             delete(documents)
             .where(documents.c.id == document_id)
         )
 
-        self._connection.execute(statement)
-        self._connection.commit()
-
-        print("✅ DELETE COMMITTED")
+        try:
+            self._connection.execute(statement)
+            self._connection.commit()
+        except Exception:
+            self._connection.rollback()
+            raise

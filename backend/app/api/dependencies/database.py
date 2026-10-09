@@ -1,18 +1,16 @@
+
 from collections.abc import Generator
 
-from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Session
 
-from app.storage.database.connection import get_connection
+from app.storage.database.connection import get_document_connection
 
 
-def get_db() -> Generator[Connection, None, None]:
-    """
-    Provides a database connection.
-    """
-
-    connection = get_connection()
+def get_db() -> Generator[Session, None, None]:
+    """Provide a database session for document repositories."""
+    session = get_document_connection()
 
     try:
-        yield connection
+        yield session
     finally:
-        connection.close()
+        session.close()

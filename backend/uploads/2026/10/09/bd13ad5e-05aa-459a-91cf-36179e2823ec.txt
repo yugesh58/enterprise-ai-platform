@@ -1,0 +1,9 @@
+Enterprise AI Platform Integration Test
+
+The platform has two agents: the Document Agent and the SQL Agent.
+
+The SQL Agent queries PostgreSQL using validated, read-only SQL queries.
+
+The Document Agent retrieves relevant document chunks from Qdrant and uses a language model to answer questions.
+
+The platform uses FastAPI for its backend API and LangGraph for agent workflows.

@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from uuid import uuid4
-
+import json
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
@@ -10,6 +10,7 @@ from app.schemas.agent_request import AgentRequest
 from app.schemas.chat import ChatRequest
 from app.services.router import route_question
 from app.storage.memory.factory import get_memory_provider
+from app.core.request_context import RequestContext
 
 
 router = APIRouter()
@@ -49,8 +50,15 @@ async def chat(request: ChatRequest):
     selected_agent = route_question(question)
 
     agent_request = AgentRequest(
-        question=question,
-        chat_history=chat_history,
+    question=question,
+    context=RequestContext(
+        conversation_id=conversation_id,
+        selected_agent=selected_agent,
+    ),
+    chat_history=chat_history,
+    attributes={
+        "conversation_id": conversation_id,
+    },
     )
 
     response = dispatch_agent(
@@ -79,13 +87,24 @@ async def chat(request: ChatRequest):
 
 
 @router.post("/chat/stream")
+
+@router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     question = request.question.strip()
 
+    def encode_event(event: str, payload: dict) -> str:
+        data = json.dumps(payload, ensure_ascii=False)
+        return f"event: {event}\ndata: {data}\n\n"
+
     if not question:
         return StreamingResponse(
-            iter(["Question cannot be empty."]),
-            media_type="text/plain",
+            iter([
+                encode_event(
+                    "error",
+                    {"message": "Question cannot be empty."},
+                )
+            ]),
+            media_type="text/event-stream",
             status_code=400,
         )
 
@@ -106,30 +125,42 @@ async def chat_stream(request: ChatRequest):
 
     agent_request = AgentRequest(
         question=question,
+        context=RequestContext(
+            conversation_id=conversation_id,
+            selected_agent=selected_agent,
+        ),
         chat_history=chat_history,
+        attributes={"conversation_id": conversation_id},
     )
 
     def generate() -> Iterator[str]:
-        """
-        Generate and stream the assistant response.
-        """
-
         full_response = ""
 
         try:
-            if selected_agent == "rag":
-                agent = RAGAgent()
-
-                for chunk in agent.stream(agent_request):
-                    full_response += chunk
-                    yield chunk
-
-            else:
-                yield (
+            if selected_agent != "rag":
+                message = (
                     "Streaming is currently supported "
                     "for the RAG agent only."
                 )
-                return
+                full_response = message
+
+                yield encode_event(
+                    "message",
+                    {"message": message},
+                )
+            else:
+                agent = RAGAgent()
+
+                for chunk in agent.stream(agent_request):
+                    if not chunk:
+                        continue
+
+                    full_response += chunk
+
+                    yield encode_event(
+                        "chunk",
+                        {"chunk": chunk},
+                    )
 
             if full_response:
                 memory.add_message(
@@ -138,8 +169,22 @@ async def chat_stream(request: ChatRequest):
                     content=full_response,
                 )
 
-        except Exception as exc:
-            yield f"\n[ERROR] {str(exc)}"
+            yield encode_event(
+                "done",
+                {"conversation_id": conversation_id},
+            )
+
+        except Exception:
+            # Never expose internal exception details to clients.
+            yield encode_event(
+                "error",
+                {
+                    "message": (
+                        "An error occurred while streaming "
+                        "the response."
+                    )
+                },
+            )
 
     response = StreamingResponse(
         generate(),
@@ -147,8 +192,8 @@ async def chat_stream(request: ChatRequest):
     )
 
     response.headers["X-Conversation-ID"] = conversation_id
-    response.headers["X-Agent"] = selected_agent
+    response.headers["X-Agent"] = str(selected_agent)
     response.headers["Cache-Control"] = "no-cache"
-    response.headers["Connection"] = "keep-alive"
+    response.headers["X-Accel-Buffering"] = "no"
 
     return response

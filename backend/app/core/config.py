@@ -56,6 +56,25 @@ class Settings(BaseSettings):
     SQL_MAX_RESULT_ROWS: int = 100
     SQL_QUERY_TIMEOUT_MS: int = 10000
 
+    DOCUMENT_DATABASE_HOST: str = "localhost"
+    DOCUMENT_DATABASE_PORT: int = 5433
+    DOCUMENT_DATABASE_NAME: str = "enterprise_ai"
+    DOCUMENT_DATABASE_USER: str = "enterprise_user"
+    DOCUMENT_DATABASE_PASSWORD: str = "enterprise_password"
+
+    @property
+    def DOCUMENT_DATABASE_URL(self) -> str:
+        from sqlalchemy.engine import URL
+
+        return URL.create(
+            drivername="postgresql+psycopg",
+            username=self.DOCUMENT_DATABASE_USER,
+            password=self.DOCUMENT_DATABASE_PASSWORD,
+            host=self.DOCUMENT_DATABASE_HOST,
+            port=self.DOCUMENT_DATABASE_PORT,
+            database=self.DOCUMENT_DATABASE_NAME,
+        ).render_as_string(hide_password=False)
+
     # ==========================================================
     # Qdrant
     # ==========================================================

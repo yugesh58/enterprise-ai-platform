@@ -28,7 +28,7 @@ from app.services.document.query_expansion_service import (
 from app.repositories.document_chunk_repository import (
     DocumentChunkRepository,
 )
-from app.storage.database.connection import get_connection
+from app.storage.database.connection import get_document_connection
 from app.api.dependencies.vectorstore import get_vector_provider
 
 
@@ -41,7 +41,7 @@ class RAGAgent(BaseAgent):
     def __init__(self) -> None:
         super().__init__()
 
-        connection = get_connection()
+        connection = get_document_connection()
 
         repository = DocumentChunkRepository(
             connection
