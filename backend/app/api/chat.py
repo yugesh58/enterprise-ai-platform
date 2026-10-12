@@ -58,6 +58,8 @@ async def chat(request: ChatRequest):
     chat_history=chat_history,
     attributes={
         "conversation_id": conversation_id,
+        "document_id": request.document_id,
+        "top_k": request.top_k,
     },
     )
 

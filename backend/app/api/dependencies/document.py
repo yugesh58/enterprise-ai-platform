@@ -83,17 +83,26 @@ def get_document_hybrid_search_service(
     )
 
 
-def get_document_retriever() -> DocumentRetriever:
+
+def get_document_retriever(
+    search_service: DocumentHybridSearchService = Depends(
+        get_document_hybrid_search_service
+    ),
+) -> DocumentRetriever:
     return DocumentRetriever(
-        search_service=get_document_hybrid_search_service(),
+        search_service=search_service,
     )
 
 
-def get_document_chat_service() -> DocumentChatService:
+
+def get_document_chat_service(
+    retriever: DocumentRetriever = Depends(
+        get_document_retriever
+    ),
+) -> DocumentChatService:
     return DocumentChatService(
-        retriever=get_document_retriever(),
+        retriever=retriever,
     )
-
 
 def get_document_service(
     repository: DocumentRepository = Depends(
@@ -125,8 +134,13 @@ def get_document_indexing_service(
         vector_provider=get_vector_provider(),
     )
 
-def get_document_rag_service() -> DocumentRAGService:
+
+def get_document_rag_service(
+    retriever: DocumentRetriever = Depends(
+        get_document_retriever
+    ),
+) -> DocumentRAGService:
     return DocumentRAGService(
-        retriever=get_document_retriever(),
+        retriever=retriever,
         context_builder=DocumentContextBuilder(),
     )

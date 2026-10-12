@@ -40,68 +40,58 @@ router = APIRouter(
 )
 
 
-@router.post(
-    "/upload",
-    status_code=202,
-)
+@router.post("/upload", status_code=202)
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    document_service: DocumentService = Depends(
-        get_document_service
-    ),
+    document_service: DocumentService = Depends(get_document_service),
     indexing_service: DocumentIndexingService = Depends(
         get_document_indexing_service
-    ),
-):
-    """
-    Upload a document and start indexing it in the background.
-
-    The endpoint immediately returns once the document has been
-    persisted. PDF extraction, chunking, embedding generation and
-    vector indexing continue asynchronously.
-    """
-
+    ),  
+    ):
     try:
         content = await file.read()
 
-        document_id = document_service.upload_document(
+        result = document_service.upload_document(
             filename=file.filename,
             content_type=file.content_type,
             content=content,
         )
 
-        background_tasks.add_task(
-            indexing_service.index_document,
-            document_id,
-        )
+        document_id = result["document_id"]
+        status = result["status"]
+
+        if result["should_index"]:
+            background_tasks.add_task(
+                indexing_service.index_document,
+                document_id,
+            )
+
+        if result["is_existing"] and not result["should_index"]:
+            message = "Existing document reused; no new indexing required."
+        elif result["is_existing"]:
+            message = "Existing failed document queued for re-indexing."
+        else:
+            message = "Document uploaded successfully. Indexing has started."
 
         return {
             "document_id": str(document_id),
             "filename": file.filename,
             "content_type": file.content_type,
             "size": len(content),
-            "status": DocumentStatus.PROCESSING.value,
-            "message": (
-                "Document uploaded successfully. "
-                "Indexing has started."
-            ),
+            "status": status,
+            "existing_document": result["is_existing"],
+            "message": message,
         }
 
     except ValueError as ex:
-
-        raise HTTPException(
-            status_code=400,
-            detail=str(ex),
-        )
+        raise HTTPException(status_code=400, detail=str(ex))
 
     except Exception as ex:
-
         raise HTTPException(
             status_code=500,
             detail=f"Document upload failed: {str(ex)}",
         )
-
 @router.post("/search")
 def search_documents(
     request: SearchRequest,

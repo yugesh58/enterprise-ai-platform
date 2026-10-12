@@ -84,7 +84,7 @@ class DocumentIndexingService:
             print("\n[2/7] Extracting PDF...")
 
             pdf = self._pdf_processing_service.extract_document(
-                pdf_bytes
+                pdf_bytes,filename=document["filename"],
             )
 
             print(

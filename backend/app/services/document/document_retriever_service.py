@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from app.services.document.document_hybrid_search_service import (
     DocumentHybridSearchService,
 )
@@ -5,15 +7,7 @@ from app.services.document.retrieval_models import RetrievalResult
 
 
 class DocumentRetriever:
-    """
-    Retrieves relevant document chunks for downstream RAG generation.
-
-    Uses hybrid retrieval combining:
-    - semantic vector search
-    - PostgreSQL keyword search
-    - query expansion
-    - Reciprocal Rank Fusion
-    """
+    """Retrieve relevant document chunks for downstream services."""
 
     def __init__(
         self,
@@ -25,11 +19,9 @@ class DocumentRetriever:
         self,
         query: str,
         top_k: int = 5,
-        document_id=None,
+        document_id: UUID | None = None,
     ) -> list[RetrievalResult]:
-        """
-        Retrieve the most relevant document chunks.
-        """
+        """Return ranked retrieval results without formatting them."""
 
         return self._search_service.search(
             query=query,

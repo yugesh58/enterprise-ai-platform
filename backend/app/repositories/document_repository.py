@@ -1,4 +1,5 @@
 
+from unittest import result
 from uuid import UUID
 
 from sqlalchemy import delete, insert, select, update
@@ -86,3 +87,13 @@ class DocumentRepository:
         except Exception:
             self._connection.rollback()
             raise
+    def get_by_content_hash(self, content_hash: str) -> dict | None:
+        statement = (
+            select(documents)
+            .where(documents.c.content_hash == content_hash)
+        )
+
+        result = self._connection.execute(statement)
+        row = result.mappings().first()
+
+        return dict(row) if row is not None else None

@@ -1,0 +1,6 @@
+Enterprise AI Platform Integration Test
+
+The fictional Aurora project has 42 engineers.
+The project uses Qdrant for vector search and PostgreSQL for document metadata.
+The Document Agent retrieves relevant document chunks to answer user questions.
+The unique verification code for this test is ORBIT-7319.
