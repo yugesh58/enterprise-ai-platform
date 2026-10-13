@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
+from contextvars import ContextVar
 
 
 @dataclass(slots=True)
@@ -31,3 +32,8 @@ class RequestContext:
     reasoning: str = ""
 
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+request_id_var: ContextVar[str] = ContextVar(
+    "request_id",
+    default="-",
+    )

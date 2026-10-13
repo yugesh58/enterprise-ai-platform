@@ -364,3 +364,10 @@ class QdrantProvider(VectorProvider):
             self._client.close()
 
             self._client = None
+
+    
+    def health_check(self) -> None:
+        """Verify Qdrant connectivity and the configured collection."""
+        self._ensure_connected()
+        self._client.get_collections()
+        self._client.get_collection(settings.QDRANT_COLLECTION)
