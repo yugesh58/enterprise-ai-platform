@@ -33,6 +33,9 @@ from app.services.document.document_indexing_service import (
 from app.services.document.document_service import (
     DocumentService,
 )
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/documents",
@@ -87,11 +90,16 @@ async def upload_document(
     except ValueError as ex:
         raise HTTPException(status_code=400, detail=str(ex))
 
-    except Exception as ex:
+    
+    except Exception:
+        
+        logger.exception("Document upload failed")
+
         raise HTTPException(
             status_code=500,
-            detail=f"Document upload failed: {str(ex)}",
+            detail="Document upload failed. Please try again.",
         )
+
 @router.post("/search")
 def search_documents(
     request: SearchRequest,
