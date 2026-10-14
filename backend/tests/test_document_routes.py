@@ -133,6 +133,7 @@ def test_upload_existing_indexed_document_does_not_reindex(
     indexing_service.index_document.assert_not_called()
 
 
+
 def test_upload_value_error_returns_400(
     client,
     document_service,
@@ -157,8 +158,14 @@ def test_upload_value_error_returns_400(
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == (
+
+    body = response.json()
+    assert body["error"]["code"] == "HTTP_ERROR"
+    assert body["error"]["message"] == (
         "Document content cannot be empty."
+    )
+    assert body["error"]["request_id"] == (
+        response.headers["x-request-id"]
     )
 
     indexing_service.index_document.assert_not_called()
