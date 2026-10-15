@@ -1,8 +1,12 @@
 
 import time
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import Iterator
 from typing import Any
 
+from app.ai.providers.cost_calculator import (
+    calculate_llm_cost,
+    get_configured_model_pricing,
+)
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,12 +24,13 @@ def _extract_token_usage(response: Any) -> dict[str, int]:
             ("total_tokens", "total_tokens"),
         ):
             value = usage_metadata.get(source)
-            if isinstance(value, int):
+            if isinstance(value, int) and not isinstance(value, bool):
                 usage[target] = value
 
     response_metadata = getattr(response, "response_metadata", None)
     if isinstance(response_metadata, dict):
         token_usage = response_metadata.get("token_usage")
+
         if not isinstance(token_usage, dict):
             token_usage = response_metadata.get("usage")
 
@@ -37,12 +42,50 @@ def _extract_token_usage(response: Any) -> dict[str, int]:
                 "input_tokens": "input_tokens",
                 "output_tokens": "output_tokens",
             }
+
             for source, target in aliases.items():
                 value = token_usage.get(source)
-                if target not in usage and isinstance(value, int):
+
+                if (
+                    target not in usage
+                    and isinstance(value, int)
+                    and not isinstance(value, bool)
+                ):
                     usage[target] = value
 
     return usage
+
+
+def _extract_cost_fields(
+    *,
+    provider: str,
+    model: str,
+    usage: dict[str, int],
+) -> dict[str, float]:
+    """Calculate estimated USD cost when pricing and token usage exist."""
+    input_tokens = usage.get("input_tokens")
+    output_tokens = usage.get("output_tokens")
+
+    # Avoid estimating cost from incomplete token usage.
+    if input_tokens is None or output_tokens is None:
+        return {}
+
+    pricing = get_configured_model_pricing(
+        provider=provider,
+        model=model,
+    )
+
+    cost = calculate_llm_cost(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        pricing=pricing,
+    )
+
+    # Unknown pricing must not be represented as a zero-cost call.
+    if cost is None:
+        return {}
+
+    return {"estimated_cost_usd": float(cost)}
 
 
 def observe_invoke(
@@ -57,6 +100,7 @@ def observe_invoke(
     try:
         response = call()
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        usage = _extract_token_usage(response)
 
         logger.info(
             "LLM call completed",
@@ -66,10 +110,17 @@ def observe_invoke(
                 "model": model,
                 "duration_ms": duration_ms,
                 "outcome": "success",
-                **_extract_token_usage(response),
+                **usage,
+                **_extract_cost_fields(
+                    provider=provider,
+                    model=model,
+                    usage=usage,
+                ),
             },
         )
+
         return response
+
     except Exception:
         logger.exception(
             "LLM call failed",
@@ -77,7 +128,10 @@ def observe_invoke(
                 "operation": operation,
                 "provider": provider,
                 "model": model,
-                "duration_ms": round((time.perf_counter() - start) * 1000, 2),
+                "duration_ms": round(
+                    (time.perf_counter() - start) * 1000,
+                    2,
+                ),
                 "outcome": "failure",
             },
         )
@@ -96,6 +150,7 @@ async def observe_ainvoke(
     try:
         response = await call()
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        usage = _extract_token_usage(response)
 
         logger.info(
             "LLM call completed",
@@ -105,10 +160,17 @@ async def observe_ainvoke(
                 "model": model,
                 "duration_ms": duration_ms,
                 "outcome": "success",
-                **_extract_token_usage(response),
+                **usage,
+                **_extract_cost_fields(
+                    provider=provider,
+                    model=model,
+                    usage=usage,
+                ),
             },
         )
+
         return response
+
     except Exception:
         logger.exception(
             "LLM call failed",
@@ -116,7 +178,10 @@ async def observe_ainvoke(
                 "operation": operation,
                 "provider": provider,
                 "model": model,
-                "duration_ms": round((time.perf_counter() - start) * 1000, 2),
+                "duration_ms": round(
+                    (time.perf_counter() - start) * 1000,
+                    2,
+                ),
                 "outcome": "failure",
             },
         )
@@ -143,11 +208,15 @@ def observe_stream(
                 "operation": "stream",
                 "provider": provider,
                 "model": model,
-                "duration_ms": round((time.perf_counter() - start) * 1000, 2),
+                "duration_ms": round(
+                    (time.perf_counter() - start) * 1000,
+                    2,
+                ),
                 "chunk_count": chunk_count,
                 "outcome": "success",
             },
         )
+
     except Exception:
         logger.exception(
             "LLM stream failed",
@@ -155,7 +224,10 @@ def observe_stream(
                 "operation": "stream",
                 "provider": provider,
                 "model": model,
-                "duration_ms": round((time.perf_counter() - start) * 1000, 2),
+                "duration_ms": round(
+                    (time.perf_counter() - start) * 1000,
+                    2,
+                ),
                 "chunk_count": chunk_count,
                 "outcome": "failure",
             },

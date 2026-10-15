@@ -1,4 +1,7 @@
+
 from fastapi import Depends
+
+from app.ai.llm_factory import LLMFactory
 
 from app.api.dependencies.repositories import (
     get_document_chunk_repository,
@@ -17,6 +20,9 @@ from app.repositories.document_repository import (
 from app.services.document.chunking_service import (
     ChunkingService,
 )
+from app.services.document.context_builder import (
+    DocumentContextBuilder,
+)
 from app.services.document.document_chat_service import (
     DocumentChatService,
 )
@@ -28,6 +34,9 @@ from app.services.document.document_indexing_service import (
 )
 from app.services.document.document_keyword_search_service import (
     DocumentKeywordSearchService,
+)
+from app.services.document.document_rag_service import (
+    DocumentRAGService,
 )
 from app.services.document.document_retriever_service import (
     DocumentRetriever,
@@ -43,12 +52,6 @@ from app.services.document.pdf_processing_service import (
 )
 from app.services.document.query_expansion_service import (
     QueryExpansionService,
-)
-from app.services.document.context_builder import (
-    DocumentContextBuilder,
-)
-from app.services.document.document_rag_service import (
-    DocumentRAGService,
 )
 
 
@@ -83,7 +86,6 @@ def get_document_hybrid_search_service(
     )
 
 
-
 def get_document_retriever(
     search_service: DocumentHybridSearchService = Depends(
         get_document_hybrid_search_service
@@ -94,7 +96,6 @@ def get_document_retriever(
     )
 
 
-
 def get_document_chat_service(
     retriever: DocumentRetriever = Depends(
         get_document_retriever
@@ -103,6 +104,7 @@ def get_document_chat_service(
     return DocumentChatService(
         retriever=retriever,
     )
+
 
 def get_document_service(
     repository: DocumentRepository = Depends(
@@ -143,4 +145,5 @@ def get_document_rag_service(
     return DocumentRAGService(
         retriever=retriever,
         context_builder=DocumentContextBuilder(),
+        llm_provider=LLMFactory.get_provider(),
     )

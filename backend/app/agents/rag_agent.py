@@ -4,24 +4,25 @@ from collections.abc import Iterator
 
 from sqlalchemy.orm import Session
 
+from app.ai.llm_factory import LLMFactory
 from app.agents.base_agent import BaseAgent
+from app.api.dependencies.vectorstore import get_vector_provider
 from app.core.enums import AgentType, ResponseStatus
+from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.schemas.agent_request import AgentRequest
 from app.schemas.agent_response import AgentResponse
 from app.services.document.context_builder import DocumentContextBuilder
-from app.services.document.document_keyword_search_service import (
-    DocumentKeywordSearchService,
-)
 from app.services.document.document_hybrid_search_service import (
     DocumentHybridSearchService,
+)
+from app.services.document.document_keyword_search_service import (
+    DocumentKeywordSearchService,
 )
 from app.services.document.document_rag_service import DocumentRAGService
 from app.services.document.document_retriever_service import DocumentRetriever
 from app.services.document.document_search_service import DocumentSearchService
 from app.services.document.query_expansion_service import QueryExpansionService
-from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.storage.database.connection import get_document_connection
-from app.api.dependencies.vectorstore import get_vector_provider
 
 
 class RAGAgent(BaseAgent):
@@ -49,11 +50,14 @@ class RAGAgent(BaseAgent):
             query_expansion_service=QueryExpansionService(),
         )
 
-        retriever = DocumentRetriever(search_service=hybrid_service)
+        retriever = DocumentRetriever(
+            search_service=hybrid_service,
+        )
 
         return DocumentRAGService(
             retriever=retriever,
             context_builder=DocumentContextBuilder(),
+            llm_provider=LLMFactory.get_provider(),
         )
 
     def execute(self, request: AgentRequest) -> AgentResponse:
@@ -84,7 +88,8 @@ class RAGAgent(BaseAgent):
             )
 
             duration_ms = round(
-                (time.perf_counter() - start_time) * 1000, 2
+                (time.perf_counter() - start_time) * 1000,
+                2,
             )
 
             self.logger.info(
@@ -115,7 +120,8 @@ class RAGAgent(BaseAgent):
                 extra={
                     "agent": str(AgentType.RAG),
                     "duration_ms": round(
-                        (time.perf_counter() - start_time) * 1000, 2
+                        (time.perf_counter() - start_time) * 1000,
+                        2,
                     ),
                     "source_count": source_count,
                     "outcome": "failure",
@@ -167,7 +173,8 @@ class RAGAgent(BaseAgent):
                 extra={
                     "agent": str(AgentType.RAG),
                     "duration_ms": round(
-                        (time.perf_counter() - start_time) * 1000, 2
+                        (time.perf_counter() - start_time) * 1000,
+                        2,
                     ),
                     "outcome": outcome,
                 },

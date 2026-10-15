@@ -44,6 +44,7 @@ class JsonFormatter(logging.Formatter):
             "output_tokens",
             "total_tokens",
             "chunk_count",
+            "estimated_cost_usd",
         )
 
         for key in structured_fields:

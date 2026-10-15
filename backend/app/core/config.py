@@ -36,6 +36,20 @@ class Settings(BaseSettings):
     TEMPERATURE: float = 0.0
     MAX_TOKENS: int = 4000
 
+    
+    # ==========================================================
+    # LLM Cost Observability
+    # Prices are in USD per one million tokens.
+    # Use None when pricing is not configured.
+    # ==========================================================
+
+    OPENAI_GPT_41_MINI_INPUT_PRICE_PER_MILLION: float | None = None
+    OPENAI_GPT_41_MINI_OUTPUT_PRICE_PER_MILLION: float | None = None
+
+    AZURE_OPENAI_INPUT_PRICE_PER_MILLION: float | None = None
+    AZURE_OPENAI_OUTPUT_PRICE_PER_MILLION: float | None = None
+
+
     # ==========================================================
     # Database
     # ==========================================================
