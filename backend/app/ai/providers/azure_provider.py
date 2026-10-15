@@ -3,12 +3,18 @@ from typing import Any, Iterator
 from langchain_openai import AzureChatOpenAI
 
 from app.ai.providers.base_provider import BaseLLMProvider
+from app.ai.providers.observability import (
+    observe_ainvoke,
+    observe_invoke,
+    observe_stream,
+)
 from app.core.config import settings
 
 
 class AzureProvider(BaseLLMProvider):
     """
-    Azure OpenAI implementation of the BaseLLMProvider.
+    Azure OpenAI implementation of the BaseLLMProvider
+    with LLM-call observability.
     """
 
     def __init__(self) -> None:
@@ -24,10 +30,25 @@ class AzureProvider(BaseLLMProvider):
         return self._llm
 
     def invoke(self, prompt: str) -> Any:
-        return self._llm.invoke(prompt)
+        return observe_invoke(
+            operation="invoke",
+            provider="azure",
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            call=lambda: self._llm.invoke(prompt),
+        )
 
     async def ainvoke(self, prompt: str) -> Any:
-        return await self._llm.ainvoke(prompt)
+        return await observe_ainvoke(
+            operation="ainvoke",
+            provider="azure",
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            call=lambda: self._llm.ainvoke(prompt),
+        )
 
     def stream(self, prompt: str) -> Iterator[Any]:
-        return self._llm.stream(prompt)
+        chunks = self._llm.stream(prompt)
+        return observe_stream(
+            provider="azure",
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            chunks=chunks,
+        )

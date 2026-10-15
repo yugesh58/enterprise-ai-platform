@@ -1,4 +1,3 @@
-
 import json
 import logging
 from datetime import datetime, timezone
@@ -22,7 +21,8 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
             "timestamp": datetime.fromtimestamp(
-                record.created, tz=timezone.utc
+                record.created,
+                tz=timezone.utc,
             ).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -31,15 +31,37 @@ class JsonFormatter(logging.Formatter):
         }
 
         # Include only explicitly supported structured fields.
-        for key in ("method", "path", "status_code", "duration_ms"):
+        structured_fields = (
+            "method",
+            "path",
+            "status_code",
+            "duration_ms",
+            "operation",
+            "provider",
+            "model",
+            "outcome",
+            "input_tokens",
+            "output_tokens",
+            "total_tokens",
+            "chunk_count",
+        )
+
+        for key in structured_fields:
             value = getattr(record, key, None)
             if value is not None:
                 payload[key] = value
 
+        # Include exception details when available.
         if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
+            payload["exception"] = self.formatException(
+                record.exc_info
+            )
 
-        return json.dumps(payload, ensure_ascii=False, default=str)
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            default=str,
+        )
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -47,6 +69,7 @@ def get_logger(name: str) -> logging.Logger:
 
     logger = logging.getLogger(name)
 
+    # Avoid attaching duplicate handlers.
     if logger.handlers:
         return logger
 
@@ -56,6 +79,7 @@ def get_logger(name: str) -> logging.Logger:
     handler = logging.StreamHandler()
     handler.addFilter(RequestIdFilter())
     handler.setFormatter(JsonFormatter())
+
     logger.addHandler(handler)
 
     return logger
