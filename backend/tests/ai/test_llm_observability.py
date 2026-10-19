@@ -244,3 +244,63 @@ def test_observability_does_not_log_prompt_or_response(caplog):
 
     assert secret_prompt not in caplog.text
     assert secret_response not in caplog.text
+
+def test_observe_stream_logs_token_usage(caplog, monkeypatch):
+    """Stream usage metadata is included in completion logs."""
+    from app.ai.providers import observability
+    from app.ai.providers.cost_calculator import ModelPricing
+    from decimal import Decimal
+
+    class UsageChunk:
+        def __init__(self, content, usage_metadata=None):
+            self.content = content
+            self.usage_metadata = usage_metadata or {}
+            self.response_metadata = {}
+
+    monkeypatch.setattr(
+        observability,
+        "get_configured_model_pricing",
+        lambda **kwargs: ModelPricing(
+            input_price_per_million=Decimal("0.40"),
+            output_price_per_million=Decimal("1.60"),
+        ),
+    )
+
+    chunks = [
+        UsageChunk("Hello"),
+        UsageChunk(" world"),
+        UsageChunk(
+            "",
+            {
+                "input_tokens": 100,
+                "output_tokens": 20,
+                "total_tokens": 120,
+            },
+        ),
+    ]
+
+    with caplog.at_level(
+        logging.INFO,
+        logger="app.ai.providers.observability",
+    ):
+        result = list(
+            observe_stream(
+                provider="openai",
+                model="gpt-4.1-mini",
+                chunks=iter(chunks),
+            )
+        )
+
+    assert result == chunks
+
+    record = next(
+        r for r in caplog.records
+        if r.message == "LLM stream completed"
+    )
+
+    assert record.outcome == "success"
+    assert record.chunk_count == 3
+    assert record.input_tokens == 100
+    assert record.output_tokens == 20
+    assert record.total_tokens == 120
+    assert record.estimated_cost_usd == pytest.approx(0.000072)

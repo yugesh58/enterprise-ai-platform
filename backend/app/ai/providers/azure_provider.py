@@ -24,6 +24,8 @@ class AzureProvider(BaseLLMProvider):
             azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
             temperature=settings.TEMPERATURE,
             api_version="2024-02-01",
+            timeout=settings.LLM_TIMEOUT_SECONDS,
+            max_retries=settings.LLM_MAX_RETRIES,
         )
 
     def get_llm(self) -> AzureChatOpenAI:

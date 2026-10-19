@@ -19,6 +19,8 @@ class OpenAIProvider(BaseLLMProvider):
             model=settings.OPENAI_MODEL,
             api_key=settings.OPENAI_API_KEY,
             temperature=settings.TEMPERATURE,
+            timeout=settings.LLM_TIMEOUT_SECONDS,
+            max_retries=settings.LLM_MAX_RETRIES,
         )
 
     def get_llm(self) -> ChatOpenAI:

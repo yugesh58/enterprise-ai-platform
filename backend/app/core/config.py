@@ -48,6 +48,8 @@ class Settings(BaseSettings):
 
     AZURE_OPENAI_INPUT_PRICE_PER_MILLION: float | None = None
     AZURE_OPENAI_OUTPUT_PRICE_PER_MILLION: float | None = None
+    LLM_TIMEOUT_SECONDS: float = 60.0
+    LLM_MAX_RETRIES: int = 2
 
 
     # ==========================================================

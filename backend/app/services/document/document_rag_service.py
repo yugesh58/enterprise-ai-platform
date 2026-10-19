@@ -24,26 +24,42 @@ class DocumentRAGService:
         document_id: str | None = None,
         conversation_id: str | None = None,
         chat_history: list[dict[str, str]] | None = None,
-    ) -> str:
+        ) -> dict:
         retrieval_query = self._build_retrieval_query(
-            question=question,
-            history=history,
+        question=question,
+        history=chat_history,
         )
 
         documents = self._retriever.retrieve(
-            query=retrieval_query,
-            top_k=top_k,
-            document_id=document_id,
+        query=retrieval_query,
+        top_k=top_k,
+        document_id=document_id,
         )
 
         context = self._context_builder.build(documents)
 
-        return self._generate_answer(
+        answer_text = self._generate_answer(
             question=question,
             context=context,
-            history=history,
+            history=chat_history,
         )
 
+    # Preserve the source formatting expected by RAGAgent.
+        sources = [
+            {
+            "source": getattr(
+                doc,
+                "metadata",
+                {},
+            ).get("source", "Unknown"),
+            }
+        for doc in documents
+        ]
+
+        return {
+            "answer": answer_text,
+            "sources": sources,
+        }
     def stream(
         self,
         question: str,
@@ -54,7 +70,7 @@ class DocumentRAGService:
     ) -> Iterator[str]:
         retrieval_query = self._build_retrieval_query(
             question=question,
-            history=history,
+            history=chat_history,
         )
 
         documents = self._retriever.retrieve(
@@ -68,7 +84,7 @@ class DocumentRAGService:
         prompt = self._build_answer_prompt(
             question=question,
             context=context,
-            history=history,
+            history=chat_history,
         )
 
         for chunk in self._llm_provider.stream(prompt):

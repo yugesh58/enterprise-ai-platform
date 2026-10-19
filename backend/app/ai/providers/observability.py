@@ -1,4 +1,5 @@
 
+import asyncio
 import time
 from collections.abc import Iterator
 from typing import Any
@@ -7,6 +8,7 @@ from app.ai.providers.cost_calculator import (
     calculate_llm_cost,
     get_configured_model_pricing,
 )
+from app.ai.providers.usage_repository import persist_usage_event
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -66,7 +68,6 @@ def _extract_cost_fields(
     input_tokens = usage.get("input_tokens")
     output_tokens = usage.get("output_tokens")
 
-    # Avoid estimating cost from incomplete token usage.
     if input_tokens is None or output_tokens is None:
         return {}
 
@@ -81,11 +82,42 @@ def _extract_cost_fields(
         pricing=pricing,
     )
 
-    # Unknown pricing must not be represented as a zero-cost call.
     if cost is None:
         return {}
 
     return {"estimated_cost_usd": float(cost)}
+
+
+def _persist_event_safely(
+    *,
+    operation: str,
+    provider: str,
+    model: str,
+    duration_ms: float,
+    outcome: str,
+    usage: dict[str, int] | None = None,
+    cost_fields: dict[str, float] | None = None,
+) -> None:
+    """Persist telemetry without affecting model execution."""
+    try:
+        persist_usage_event(
+            operation=operation,
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome=outcome,
+            usage=usage,
+            estimated_cost_usd=(cost_fields or {}).get(
+                "estimated_cost_usd"
+            ),
+        )
+    except Exception:
+        logger.exception("Unexpected error while persisting LLM telemetry")
+
+
+async def _persist_event_async(**event: Any) -> None:
+    """Run synchronous database persistence outside the event loop."""
+    await asyncio.to_thread(_persist_event_safely, **event)
 
 
 def observe_invoke(
@@ -94,13 +126,18 @@ def observe_invoke(
     model: str,
     call: Any,
 ) -> Any:
-    """Observe a synchronous model invocation."""
+    """Observe and persist a synchronous model invocation."""
     start = time.perf_counter()
 
     try:
         response = call()
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         usage = _extract_token_usage(response)
+        cost_fields = _extract_cost_fields(
+            provider=provider,
+            model=model,
+            usage=usage,
+        )
 
         logger.info(
             "LLM call completed",
@@ -111,30 +148,44 @@ def observe_invoke(
                 "duration_ms": duration_ms,
                 "outcome": "success",
                 **usage,
-                **_extract_cost_fields(
-                    provider=provider,
-                    model=model,
-                    usage=usage,
-                ),
+                **cost_fields,
             },
+        )
+
+        _persist_event_safely(
+            operation=operation,
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome="success",
+            usage=usage,
+            cost_fields=cost_fields,
         )
 
         return response
 
     except Exception:
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
         logger.exception(
             "LLM call failed",
             extra={
                 "operation": operation,
                 "provider": provider,
                 "model": model,
-                "duration_ms": round(
-                    (time.perf_counter() - start) * 1000,
-                    2,
-                ),
+                "duration_ms": duration_ms,
                 "outcome": "failure",
             },
         )
+
+        _persist_event_safely(
+            operation=operation,
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome="failure",
+        )
+
         raise
 
 
@@ -144,13 +195,18 @@ async def observe_ainvoke(
     model: str,
     call: Any,
 ) -> Any:
-    """Observe an asynchronous model invocation."""
+    """Observe and persist an asynchronous model invocation."""
     start = time.perf_counter()
 
     try:
         response = await call()
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         usage = _extract_token_usage(response)
+        cost_fields = _extract_cost_fields(
+            provider=provider,
+            model=model,
+            usage=usage,
+        )
 
         logger.info(
             "LLM call completed",
@@ -161,30 +217,44 @@ async def observe_ainvoke(
                 "duration_ms": duration_ms,
                 "outcome": "success",
                 **usage,
-                **_extract_cost_fields(
-                    provider=provider,
-                    model=model,
-                    usage=usage,
-                ),
+                **cost_fields,
             },
+        )
+
+        await _persist_event_async(
+            operation=operation,
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome="success",
+            usage=usage,
+            cost_fields=cost_fields,
         )
 
         return response
 
     except Exception:
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
         logger.exception(
             "LLM call failed",
             extra={
                 "operation": operation,
                 "provider": provider,
                 "model": model,
-                "duration_ms": round(
-                    (time.perf_counter() - start) * 1000,
-                    2,
-                ),
+                "duration_ms": duration_ms,
                 "outcome": "failure",
             },
         )
+
+        await _persist_event_async(
+            operation=operation,
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome="failure",
+        )
+
         raise
 
 
@@ -193,14 +263,27 @@ def observe_stream(
     model: str,
     chunks: Iterator[Any],
 ) -> Iterator[Any]:
-    """Observe a synchronous stream for its entire iteration."""
+    """Observe and persist stream duration, chunks, usage, and cost."""
     start = time.perf_counter()
     chunk_count = 0
+    usage: dict[str, int] = {}
 
     try:
         for chunk in chunks:
             chunk_count += 1
+
+            # Usage metadata is commonly attached to the final chunk.
+            chunk_usage = _extract_token_usage(chunk)
+            usage.update(chunk_usage)
+
             yield chunk
+
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        cost_fields = _extract_cost_fields(
+            provider=provider,
+            model=model,
+            usage=usage,
+        )
 
         logger.info(
             "LLM stream completed",
@@ -208,28 +291,54 @@ def observe_stream(
                 "operation": "stream",
                 "provider": provider,
                 "model": model,
-                "duration_ms": round(
-                    (time.perf_counter() - start) * 1000,
-                    2,
-                ),
+                "duration_ms": duration_ms,
                 "chunk_count": chunk_count,
                 "outcome": "success",
+                **usage,
+                **cost_fields,
             },
         )
 
+        _persist_event_safely(
+            operation="stream",
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome="success",
+            usage=usage,
+            cost_fields=cost_fields,
+        )
+
     except Exception:
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        cost_fields = _extract_cost_fields(
+            provider=provider,
+            model=model,
+            usage=usage,
+        )
+
         logger.exception(
             "LLM stream failed",
             extra={
                 "operation": "stream",
                 "provider": provider,
                 "model": model,
-                "duration_ms": round(
-                    (time.perf_counter() - start) * 1000,
-                    2,
-                ),
+                "duration_ms": duration_ms,
                 "chunk_count": chunk_count,
                 "outcome": "failure",
+                **usage,
+                **cost_fields,
             },
         )
+
+        _persist_event_safely(
+            operation="stream",
+            provider=provider,
+            model=model,
+            duration_ms=duration_ms,
+            outcome="failure",
+            usage=usage,
+            cost_fields=cost_fields,
+        )
+
         raise
