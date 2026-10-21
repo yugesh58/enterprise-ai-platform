@@ -36,6 +36,7 @@ llm_usage_events = Table(
     Column("estimated_cost_usd", Numeric(18, 10), nullable=True),
     Column("duration_ms", Numeric(12, 2), nullable=False),
     Column("outcome", String(20), nullable=False),
+    Column("error_type", String(50), nullable=True),
 
     Column(
         "created_at",

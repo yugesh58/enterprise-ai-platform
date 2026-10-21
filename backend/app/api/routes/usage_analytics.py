@@ -30,6 +30,7 @@ class RequestUsageItem(BaseModel):
     total_output_tokens: int
     total_estimated_cost_usd: Decimal
     total_duration_ms: Decimal
+    error_types: list[str]
 
 
 class DailyUsageItem(BaseModel):
@@ -41,6 +42,7 @@ class DailyUsageItem(BaseModel):
     total_input_tokens: int
     total_output_tokens: int
     total_estimated_cost_usd: Decimal
+    error_types: list[str]
 
 
 @router.get("/requests/{request_id}", response_model=list[RequestUsageItem])

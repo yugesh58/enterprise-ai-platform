@@ -22,6 +22,7 @@ def persist_usage_event(
     usage: dict[str, int] | None = None,
     estimated_cost_usd: float | Decimal | None = None,
     chunk_count: int | None = None,
+    error_type: str | None = None,
 ) -> None:
     """Persist one LLM operation without propagating database errors."""
 
@@ -43,6 +44,7 @@ def persist_usage_event(
         ),
         "duration_ms": Decimal(str(duration_ms)),
         "outcome": outcome,
+        "error_type": error_type,
     }
 
     try:

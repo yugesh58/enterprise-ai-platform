@@ -14,6 +14,11 @@ def get_request_usage(request_id: str) -> list[dict]:
             model,
             COUNT(*) AS total_calls,
             COUNT(*) FILTER (WHERE outcome = 'failure') AS failed_calls,
+            COALESCE(
+                ARRAY_AGG(DISTINCT error_type)
+                    FILTER (WHERE outcome = 'failure' AND error_type IS NOT NULL),
+                ARRAY[]::varchar[]
+            ) AS error_types,
             COALESCE(SUM(input_tokens), 0) AS total_input_tokens,
             COALESCE(SUM(output_tokens), 0) AS total_output_tokens,
             COALESCE(SUM(estimated_cost_usd), 0)
@@ -47,6 +52,11 @@ def get_daily_usage(days: int = 7) -> list[dict]:
             model,
             COUNT(*) AS total_calls,
             COUNT(*) FILTER (WHERE outcome = 'failure') AS failed_calls,
+            COALESCE(
+                ARRAY_AGG(DISTINCT error_type)
+                    FILTER (WHERE outcome = 'failure' AND error_type IS NOT NULL),
+                ARRAY[]::varchar[]
+            ) AS error_types,
             COALESCE(SUM(input_tokens), 0) AS total_input_tokens,
             COALESCE(SUM(output_tokens), 0) AS total_output_tokens,
             COALESCE(SUM(estimated_cost_usd), 0)

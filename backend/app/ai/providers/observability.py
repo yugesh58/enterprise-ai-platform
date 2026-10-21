@@ -10,8 +10,28 @@ from app.ai.providers.cost_calculator import (
 )
 from app.ai.providers.usage_repository import persist_usage_event
 from app.core.logging import get_logger
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    RateLimitError,
+)
 
 logger = get_logger(__name__)
+def _classify_llm_error(exc: Exception) -> str:
+    """Map provider exceptions to stable diagnostic categories."""
+    if isinstance(exc, RateLimitError):
+        return "rate_limit"
+    if isinstance(exc, APITimeoutError):
+        return "timeout"
+    if isinstance(exc, APIConnectionError):
+        return "connection_error"
+    if isinstance(exc, AuthenticationError):
+        return "authentication_error"
+    if isinstance(exc, BadRequestError):
+        return "invalid_request"
+    return "unknown"
 
 
 def _extract_token_usage(response: Any) -> dict[str, int]:
@@ -97,6 +117,7 @@ def _persist_event_safely(
     outcome: str,
     usage: dict[str, int] | None = None,
     cost_fields: dict[str, float] | None = None,
+    error_type: str | None = None,
 ) -> None:
     """Persist telemetry without affecting model execution."""
     try:
@@ -110,6 +131,7 @@ def _persist_event_safely(
             estimated_cost_usd=(cost_fields or {}).get(
                 "estimated_cost_usd"
             ),
+            error_type=error_type,
         )
     except Exception:
         logger.exception("Unexpected error while persisting LLM telemetry")
@@ -124,8 +146,8 @@ def observe_invoke(
     operation: str,
     provider: str,
     model: str,
-    call: Any,
-) -> Any:
+    call: Any,  
+    ) -> Any:
     """Observe and persist a synchronous model invocation."""
     start = time.perf_counter()
 
@@ -164,8 +186,9 @@ def observe_invoke(
 
         return response
 
-    except Exception:
+    except Exception as exc:
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        error_type = _classify_llm_error(exc)
 
         logger.exception(
             "LLM call failed",
@@ -175,6 +198,7 @@ def observe_invoke(
                 "model": model,
                 "duration_ms": duration_ms,
                 "outcome": "failure",
+                "error_type": error_type,
             },
         )
 
@@ -184,6 +208,7 @@ def observe_invoke(
             model=model,
             duration_ms=duration_ms,
             outcome="failure",
+            error_type=error_type,
         )
 
         raise
@@ -233,8 +258,9 @@ async def observe_ainvoke(
 
         return response
 
-    except Exception:
+    except Exception as exc:
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        error_type = _classify_llm_error(exc)
 
         logger.exception(
             "LLM call failed",
@@ -244,6 +270,7 @@ async def observe_ainvoke(
                 "model": model,
                 "duration_ms": duration_ms,
                 "outcome": "failure",
+                "error_type": error_type,
             },
         )
 
@@ -253,6 +280,7 @@ async def observe_ainvoke(
             model=model,
             duration_ms=duration_ms,
             outcome="failure",
+            error_type=error_type,
         )
 
         raise
@@ -309,13 +337,14 @@ def observe_stream(
             cost_fields=cost_fields,
         )
 
-    except Exception:
+    except Exception as exc:
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         cost_fields = _extract_cost_fields(
             provider=provider,
             model=model,
             usage=usage,
         )
+        error_type = _classify_llm_error(exc)
 
         logger.exception(
             "LLM stream failed",
@@ -328,6 +357,7 @@ def observe_stream(
                 "outcome": "failure",
                 **usage,
                 **cost_fields,
+                "error_type": error_type,
             },
         )
 
@@ -339,6 +369,39 @@ def observe_stream(
             outcome="failure",
             usage=usage,
             cost_fields=cost_fields,
+            error_type=error_type,
         )
 
         raise
+
+def test_observe_stream_persists_error_type(monkeypatch):
+    """Stream failure telemetry includes the classified error type."""
+
+    from app.ai.providers import observability
+
+    persisted_events = []
+
+    monkeypatch.setattr(
+        observability,
+        "_persist_event_safely",
+        lambda **kwargs: persisted_events.append(kwargs),
+    )
+
+    def failing_chunks():
+        yield "first chunk"
+        raise RuntimeError("simulated stream failure")
+
+    with pytest.raises(RuntimeError, match="simulated stream failure"):
+        list(
+            observe_stream(
+                provider="openai",
+                model="test-model",
+                chunks=failing_chunks(),
+            )
+        )
+
+    assert len(persisted_events) == 1
+    assert persisted_events[0]["outcome"] == "failure"
+    assert persisted_events[0]["error_type"] == "unknown"
+    assert persisted_events[0]["operation"] == "stream"
+    assert persisted_events[0]["chunk_count"] == 1

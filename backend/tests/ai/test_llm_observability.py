@@ -1,9 +1,20 @@
+
 import asyncio
 import logging
 
+import httpx
 import pytest
 
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    RateLimitError,
+)
+
 from app.ai.providers.observability import (
+    _classify_llm_error,
     observe_ainvoke,
     observe_invoke,
     observe_stream,
@@ -19,6 +30,23 @@ class FakeResponse:
         "total_tokens": 20,
     }
     response_metadata = {}
+
+
+def make_openai_error(error_class, message, status_code):
+    """Construct an OpenAI exception with a valid HTTP response."""
+    request = httpx.Request(
+        "POST",
+        "https://api.openai.com/v1/chat/completions",
+    )
+    response = httpx.Response(
+        status_code,
+        request=request,
+    )
+    return error_class(
+        message,
+        response=response,
+        body=None,
+    )
 
 
 def test_observe_invoke_logs_latency_and_token_usage(caplog):
@@ -83,10 +111,11 @@ def test_observe_invoke_logs_failure_and_reraises(caplog):
     assert record.operation == "invoke"
     assert record.duration_ms >= 0
     assert record.outcome == "failure"
+    assert record.error_type == "unknown"
 
 
 def test_observe_stream_logs_duration_and_chunk_count(caplog):
-    """Successful streams log their duration and number of chunks."""
+    """Successful streams log duration and number of chunks."""
 
     chunks = iter(["chunk-1", "chunk-2", "chunk-3"])
 
@@ -221,6 +250,7 @@ def test_observe_ainvoke_logs_failure_and_reraises(caplog):
         assert record.operation == "ainvoke"
         assert record.duration_ms >= 0
         assert record.outcome == "failure"
+        assert record.error_type == "unknown"
 
     asyncio.run(run_test())
 
@@ -245,11 +275,14 @@ def test_observability_does_not_log_prompt_or_response(caplog):
     assert secret_prompt not in caplog.text
     assert secret_response not in caplog.text
 
+
 def test_observe_stream_logs_token_usage(caplog, monkeypatch):
     """Stream usage metadata is included in completion logs."""
+
+    from decimal import Decimal
+
     from app.ai.providers import observability
     from app.ai.providers.cost_calculator import ModelPricing
-    from decimal import Decimal
 
     class UsageChunk:
         def __init__(self, content, usage_metadata=None):
@@ -304,3 +337,164 @@ def test_observe_stream_logs_token_usage(caplog, monkeypatch):
     assert record.output_tokens == 20
     assert record.total_tokens == 120
     assert record.estimated_cost_usd == pytest.approx(0.000072)
+
+
+@pytest.mark.parametrize(
+    ("exception", "expected"),
+    [
+        (
+            make_openai_error(
+                RateLimitError,
+                "rate limited",
+                429,
+            ),
+            "rate_limit",
+        ),
+        (
+            APITimeoutError(
+                request=httpx.Request(
+                    "POST",
+                    "https://api.openai.com/v1/chat/completions",
+                ),
+            ),
+            "timeout",
+        ),
+        (
+            APIConnectionError(
+                message="connection failed",
+                request=httpx.Request(
+                    "POST",
+                    "https://api.openai.com/v1/chat/completions",
+                ),
+            ),
+            "connection_error",
+        ),
+        (
+            make_openai_error(
+                AuthenticationError,
+                "authentication failed",
+                401,
+            ),
+            "authentication_error",
+        ),
+        (
+            make_openai_error(
+                BadRequestError,
+                "invalid request",
+                400,
+            ),
+            "invalid_request",
+        ),
+        (
+            RuntimeError("unexpected failure"),
+            "unknown",
+        ),
+    ],
+)
+def test_classify_llm_error(exception, expected):
+    """Provider exceptions map to stable diagnostic categories."""
+
+    assert _classify_llm_error(exception) == expected
+
+
+def test_observe_invoke_persists_error_type(monkeypatch):
+    """Failure telemetry includes the classified error type."""
+
+    from app.ai.providers import observability
+
+    persisted_events = []
+
+    monkeypatch.setattr(
+        observability,
+        "_persist_event_safely",
+        lambda **kwargs: persisted_events.append(kwargs),
+    )
+
+    error = RuntimeError("simulated failure")
+
+    def fail():
+        raise error
+
+    with pytest.raises(RuntimeError) as exc_info:
+        observe_invoke(
+            operation="invoke",
+            provider="openai",
+            model="test-model",
+            call=fail,
+        )
+
+    assert exc_info.value is error
+    assert len(persisted_events) == 1
+    assert persisted_events[0]["outcome"] == "failure"
+    assert persisted_events[0]["error_type"] == "unknown"
+
+
+def test_observe_ainvoke_persists_error_type(monkeypatch):
+    """Async failure telemetry includes the classified error type."""
+
+    from app.ai.providers import observability
+
+    persisted_events = []
+
+    async def fake_persist_event_async(**kwargs):
+        persisted_events.append(kwargs)
+
+    monkeypatch.setattr(
+        observability,
+        "_persist_event_async",
+        fake_persist_event_async,
+    )
+
+    error = RuntimeError("simulated async failure")
+
+    async def fail():
+        raise error
+
+    async def run_test():
+        with pytest.raises(RuntimeError) as exc_info:
+            await observe_ainvoke(
+                operation="ainvoke",
+                provider="azure",
+                model="test-deployment",
+                call=fail,
+            )
+
+        assert exc_info.value is error
+
+    asyncio.run(run_test())
+
+    assert len(persisted_events) == 1
+    assert persisted_events[0]["outcome"] == "failure"
+    assert persisted_events[0]["error_type"] == "unknown"
+    assert persisted_events[0]["operation"] == "ainvoke"
+def test_observe_invoke_persists_classified_rate_limit(monkeypatch):
+    from app.ai.providers import observability
+
+    persisted_events = []
+
+    monkeypatch.setattr(
+        observability,
+        "_persist_event_safely",
+        lambda **kwargs: persisted_events.append(kwargs),
+    )
+
+    error = make_openai_error(
+        RateLimitError,
+        "rate limited",
+        429,
+    )
+
+    def fail():
+        raise error
+
+    with pytest.raises(RateLimitError):
+        observe_invoke(
+            operation="invoke",
+            provider="openai",
+            model="test-model",
+            call=fail,
+        )
+
+    assert len(persisted_events) == 1
+    assert persisted_events[0]["outcome"] == "failure"
+    assert persisted_events[0]["error_type"] == "rate_limit"

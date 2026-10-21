@@ -22,6 +22,7 @@ def test_daily_usage_returns_analytics():
             "total_input_tokens": 1025,
             "total_output_tokens": 82,
             "total_estimated_cost_usd": "0.0005412000",
+            "error_types": [],
         }
     ]
 
@@ -52,6 +53,7 @@ def test_request_usage_returns_aggregated_analytics():
             "total_output_tokens": 22,
             "total_estimated_cost_usd": "0.0003252000",
             "total_duration_ms": "3388.27",
+            "error_types": [],
         }
     ]
 
