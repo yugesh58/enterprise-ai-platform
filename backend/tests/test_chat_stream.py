@@ -5,8 +5,12 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.core.config import settings
 
-client = TestClient(app)
+TEST_API_KEY = "test-api-key-for-tests"
+
+
+client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
 
 
 def parse_sse_events(body: str) -> list[tuple[str, dict]]:

@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from uuid import uuid4
 import json
-from fastapi import APIRouter
+
 from fastapi.responses import StreamingResponse
 
 from app.agents.agent_dispatcher import dispatch_agent
@@ -11,9 +11,13 @@ from app.schemas.chat import ChatRequest
 from app.services.router import route_question
 from app.storage.memory.factory import get_memory_provider
 from app.core.request_context import RequestContext
+from fastapi import APIRouter, Depends
+from app.api.dependencies.security import require_api_key
 
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(require_api_key)],
+)
 
 memory = get_memory_provider()
 

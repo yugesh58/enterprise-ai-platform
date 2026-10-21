@@ -12,15 +12,21 @@ from app.api.dependencies.document import (
     get_document_search_service,
     get_document_chat_service,
 )
-
+from app.core.config import settings
 
 @pytest.fixture
 def client():
-    with TestClient(app) as test_client:
+    test_api_key = "test-api-key-for-tests"
+    settings.API_AUTH_ENABLED = True
+    settings.API_KEY = test_api_key
+
+    with TestClient(
+        app,
+        headers={"X-API-Key": test_api_key},
+    ) as test_client:
         yield test_client
 
     app.dependency_overrides.clear()
-
 
 @pytest.fixture
 def document_service():

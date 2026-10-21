@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     API_VERSION: str = "v1"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
+    # ==========================================================
+    # API Security
+    # ==========================================================
+    API_AUTH_ENABLED: bool = True
+    API_KEY: str = ""
 
     # ==========================================================
     # AI Configuration

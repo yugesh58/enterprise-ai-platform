@@ -34,12 +34,14 @@ from app.services.document.document_service import (
     DocumentService,
 )
 from app.core.logging import get_logger
+from app.api.dependencies.security import require_api_key
 
 logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/documents",
     tags=["Documents"],
+    dependencies=[Depends(require_api_key)],
 )
 
 

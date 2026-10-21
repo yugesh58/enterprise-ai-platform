@@ -1,16 +1,30 @@
-
 from unittest.mock import patch
-
 
 from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.main import app
+
+TEST_API_KEY = "test-api-key-for-tests"
+settings.API_AUTH_ENABLED = True
+settings.API_KEY = TEST_API_KEY
 
 client = TestClient(app)
 
 REQUEST_ID = "ce9b2113-493e-48b2-b4e5-b45d72c65a91"
 
 
+def authenticated_get(path: str, **kwargs):
+    headers = kwargs.pop("headers", {})
+    headers = {
+        **headers,
+        "X-API-Key": TEST_API_KEY,
+    }
+    return client.get(
+        path,
+        headers=headers,
+        **kwargs,
+    )
 def test_daily_usage_returns_analytics():
     expected = [
         {
@@ -30,7 +44,7 @@ def test_daily_usage_returns_analytics():
         "app.api.routes.usage_analytics.get_daily_usage",
         return_value=expected,
     ) as mock_get_daily_usage:
-        response = client.get(
+        response = authenticated_get(
             "/analytics/llm-usage/daily",
             params={"days": 7},
         )
@@ -61,7 +75,7 @@ def test_request_usage_returns_aggregated_analytics():
         "app.api.routes.usage_analytics.get_request_usage",
         return_value=expected,
     ) as mock_get_request_usage:
-        response = client.get(
+        response = authenticated_get(
             f"/analytics/llm-usage/requests/{REQUEST_ID}"
         )
 
@@ -74,7 +88,7 @@ def test_daily_usage_rejects_days_below_minimum():
     with patch(
         "app.api.routes.usage_analytics.get_daily_usage"
     ) as mock_get_daily_usage:
-        response = client.get(
+        response = authenticated_get(
             "/analytics/llm-usage/daily",
             params={"days": 0},
         )
@@ -89,7 +103,7 @@ def test_daily_usage_rejects_days_above_maximum():
     with patch(
         "app.api.routes.usage_analytics.get_daily_usage"
     ) as mock_get_daily_usage:
-        response = client.get(
+        response = authenticated_get(
             "/analytics/llm-usage/daily",
             params={"days": 366},
         )
@@ -103,7 +117,7 @@ def test_request_usage_rejects_invalid_uuid():
     with patch(
         "app.api.routes.usage_analytics.get_request_usage"
     ) as mock_get_request_usage:
-        response = client.get(
+        response = authenticated_get(
             "/analytics/llm-usage/requests/not-a-uuid"
         )
 
@@ -116,7 +130,7 @@ def test_daily_usage_service_failure_returns_standard_error():
         "app.api.routes.usage_analytics.get_daily_usage",
         side_effect=RuntimeError("database connection details"),
     ):
-        response = client.get("/analytics/llm-usage/daily")
+        response = authenticated_get("/analytics/llm-usage/daily")
 
     assert response.status_code == 500
     assert response.headers.get("x-request-id")
@@ -132,7 +146,7 @@ def test_request_usage_service_failure_returns_standard_error():
         "app.api.routes.usage_analytics.get_request_usage",
         side_effect=RuntimeError("database connection details"),
     ):
-        response = client.get(
+        response = authenticated_get(
             f"/analytics/llm-usage/requests/{REQUEST_ID}"
         )
 

@@ -4,9 +4,11 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.schemas.agent_response import AgentResponse
+from app.core.config import settings
+TEST_API_KEY = "test-api-key-for-tests"
 
-client = TestClient(app)
 
+client = TestClient(app, headers={"X-API-Key": TEST_API_KEY})
 
 @patch("app.api.chat.dispatch_agent")
 @patch("app.api.chat.route_question", return_value="sql")
