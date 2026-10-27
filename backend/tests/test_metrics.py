@@ -3,10 +3,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
-    generate_latest,
 )
 
-from app.api.dependencies.security import require_api_key
 from app.api.middleware import RequestContextMiddleware
 from app.api.routes.metrics import router as metrics_router
 from app.core.config import settings

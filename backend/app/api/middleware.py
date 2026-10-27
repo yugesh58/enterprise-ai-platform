@@ -8,7 +8,6 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.logging import get_logger
 from app.core.request_context import request_id_var
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.core.metrics import (
     HTTP_REQUESTS_TOTAL,
