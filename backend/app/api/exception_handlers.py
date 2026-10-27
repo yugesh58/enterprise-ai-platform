@@ -5,6 +5,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import get_logger
 from app.core.request_context import request_id_var
+from app.core.exceptions import (
+    AgentExecutionError,
+    ApplicationValidationError,
+    EnterpriseAIError,
+    RouterError,
+    UnauthorizedError,
+)
 
 logger = get_logger(__name__)
 
@@ -82,6 +89,52 @@ async def unexpected_exception_handler(
         message="An unexpected error occurred.",
     )
 
+async def application_exception_handler(
+    request: Request,
+    exc: EnterpriseAIError,
+) -> JSONResponse:
+    mappings = {
+        ApplicationValidationError: (
+            422,
+            "APPLICATION_VALIDATION_ERROR",
+            "Application validation failed.",
+        ),
+        UnauthorizedError: (
+            401,
+            "UNAUTHORIZED",
+            "Authentication is required or invalid.",
+        ),
+        AgentExecutionError: (
+            502,
+            "AGENT_EXECUTION_ERROR",
+            "The agent could not complete the request.",
+        ),
+        RouterError: (
+            500,
+            "ROUTER_ERROR",
+            "An internal routing error occurred.",
+        ),
+        EnterpriseAIError: (
+            500,
+            "APPLICATION_ERROR",
+            "An unexpected application error occurred.",
+        ),
+    }
+
+    status_code, code, message = mappings[type(exc)]
+
+    logger.error(
+        "Application exception: type=%s method=%s path=%s",
+        type(exc).__name__,
+        request.method,
+        request.url.path,
+    )
+
+    return _error_response(
+        status_code=status_code,
+        code=code,
+        message=message,
+    )
 
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
@@ -95,4 +148,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         Exception,
         unexpected_exception_handler,
+    )
+    app.add_exception_handler(
+    EnterpriseAIError,
+    application_exception_handler,
     )
