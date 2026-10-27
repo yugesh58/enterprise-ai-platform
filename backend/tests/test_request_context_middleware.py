@@ -27,6 +27,9 @@ def test_stream():
     logger.info("Stream endpoint executed")
     return {"message": "stream test"}
 
+@app.get("/test-error")
+def error_endpoint():
+    raise RuntimeError("test failure")
 
 client = TestClient(app)
 
@@ -114,9 +117,14 @@ def test_error_response_preserves_incoming_request_id():
         app,
         raise_server_exceptions=False,
     ).get(
-        "/test",
+        "/test-error",
         headers={"X-Request-ID": request_id},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 500
     assert response.headers["x-request-id"] == request_id
+
+    body = response.json()["error"]
+    assert body["code"] == "INTERNAL_SERVER_ERROR"
+    assert body["request_id"] == request_id
+    assert "test failure" not in response.text
