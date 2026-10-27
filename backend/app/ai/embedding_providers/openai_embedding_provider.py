@@ -13,8 +13,10 @@ class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
 
     def __init__(self) -> None:
         self._embeddings = OpenAIEmbeddings(
-            model=settings.OPENAI_EMBEDDING_MODEL,
-            api_key=settings.OPENAI_API_KEY,
+        model=settings.OPENAI_EMBEDDING_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+        timeout=settings.EMBEDDING_TIMEOUT_SECONDS,
+        max_retries=settings.EMBEDDING_MAX_RETRIES,
         )
 
     def get_embeddings(self) -> OpenAIEmbeddings:

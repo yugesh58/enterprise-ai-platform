@@ -13,11 +13,13 @@ class AzureEmbeddingProvider(BaseEmbeddingProvider):
 
     def __init__(self) -> None:
         self._embeddings = AzureOpenAIEmbeddings(
-            model=settings.OPENAI_EMBEDDING_MODEL,
-            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-            api_key=settings.AZURE_OPENAI_API_KEY,
-            api_version=settings.AZURE_OPENAI_API_VERSION,
-        )
+        model=settings.OPENAI_EMBEDDING_MODEL,
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_API_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+        timeout=settings.EMBEDDING_TIMEOUT_SECONDS,
+        max_retries=settings.EMBEDDING_MAX_RETRIES,
+)
 
     def get_embeddings(self) -> AzureOpenAIEmbeddings:
         return self._embeddings

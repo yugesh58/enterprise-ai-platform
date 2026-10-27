@@ -53,6 +53,7 @@ class Settings(BaseSettings):
 
     AZURE_OPENAI_INPUT_PRICE_PER_MILLION: float | None = None
     AZURE_OPENAI_OUTPUT_PRICE_PER_MILLION: float | None = None
+    AZURE_OPENAI_API_VERSION: str = "2024-02-01"
     LLM_TIMEOUT_SECONDS: float = 60.0
     LLM_MAX_RETRIES: int = 2
 
@@ -127,6 +128,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS: int = 20
     RATE_LIMIT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_KEY_SECRET: str = ""
+
+    # ==========================================================
+    # Embedding Resilience
+    # ==========================================================
+    EMBEDDING_TIMEOUT_SECONDS: float = 30.0
+    EMBEDDING_MAX_RETRIES: int = 2
 
     # ==========================================================
     # Azure Blob Storage
