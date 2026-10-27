@@ -8,6 +8,12 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.logging import get_logger
 from app.core.request_context import request_id_var
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+from app.core.metrics import (
+    HTTP_REQUESTS_TOTAL,
+    HTTP_REQUEST_DURATION_SECONDS,
+)
 
 logger = get_logger(__name__)
 
@@ -30,6 +36,15 @@ def _get_request_id(scope: Scope) -> str:
 
     return str(uuid4())
 
+def _get_route_template(scope: Scope) -> str:
+    """Return a bounded route label, never the raw URL."""
+    route = scope.get("route")
+    path = getattr(route, "path", None)
+
+    if isinstance(path, str) and path:
+        return path
+
+    return "__unmatched__"
 
 class RequestContextMiddleware:
     """Attach a correlation ID and log completion for each HTTP request."""
@@ -110,6 +125,19 @@ class RequestContextMiddleware:
                 (time.perf_counter() - start_time) * 1000,
                 2,
             )
+            route = _get_route_template(scope)
+            method = scope.get("method", "UNKNOWN")
+
+            HTTP_REQUESTS_TOTAL.labels(
+            method=method,
+            route=route,
+            status_code=str(status_code),
+            ).inc()
+
+            HTTP_REQUEST_DURATION_SECONDS.labels(
+                method=method,
+                route=route,
+                ).observe(duration_ms / 1000)
 
             logger.info(
                 "Request completed",
