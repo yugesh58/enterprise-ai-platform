@@ -1,4 +1,5 @@
 
+import re
 import time
 from uuid import uuid4
 
@@ -9,6 +10,25 @@ from app.core.logging import get_logger
 from app.core.request_context import request_id_var
 
 logger = get_logger(__name__)
+
+# Restrict IDs to a safe, bounded character set.
+_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+
+
+def _get_request_id(scope: Scope) -> str:
+    """Accept a safe incoming request ID or generate a UUID."""
+    headers = dict(scope.get("headers", []))
+    incoming = headers.get(b"x-request-id", b"")
+
+    try:
+        candidate = incoming.decode("ascii")
+    except UnicodeDecodeError:
+        candidate = ""
+
+    if candidate and _REQUEST_ID_PATTERN.fullmatch(candidate):
+        return candidate
+
+    return str(uuid4())
 
 
 class RequestContextMiddleware:
@@ -27,7 +47,7 @@ class RequestContextMiddleware:
             await self.app(scope, receive, send)
             return
 
-        request_id = str(uuid4())
+        request_id = _get_request_id(scope)
         context_token = request_id_var.set(request_id)
 
         start_time = time.perf_counter()
@@ -41,14 +61,16 @@ class RequestContextMiddleware:
                 response_started = True
                 status_code = message["status"]
 
-                headers = list(message.get("headers", []))
+                # Replace any existing value rather than append a duplicate.
+                headers = [
+                    (name, value)
+                    for name, value in message.get("headers", [])
+                    if name.lower() != b"x-request-id"
+                ]
                 headers.append(
                     (b"x-request-id", request_id.encode("ascii"))
                 )
-                message = {
-                    **message,
-                    "headers": headers,
-                }
+                message = {**message, "headers": headers}
 
             await send(message)
 

@@ -70,3 +70,53 @@ def test_request_id_header_is_returned_for_streaming_response():
 
     assert response.status_code == 200
     UUID(response.headers["x-request-id"])
+
+def test_valid_incoming_request_id_is_preserved():
+    request_id = "trace-abc-123"
+
+    response = client.get(
+        "/test",
+        headers={"X-Request-ID": request_id},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == request_id
+    assert response.json()["request_id"] == request_id
+
+
+def test_invalid_incoming_request_id_is_replaced():
+    response = client.get(
+        "/test",
+        headers={"X-Request-ID": "invalid id with spaces"},
+    )
+
+    assert response.status_code == 200
+
+    request_id = response.headers["x-request-id"]
+    UUID(request_id)
+    assert response.json()["request_id"] == request_id
+
+
+def test_excessively_long_request_id_is_replaced():
+    response = client.get(
+        "/test",
+        headers={"X-Request-ID": "a" * 129},
+    )
+
+    assert response.status_code == 200
+    UUID(response.headers["x-request-id"])
+
+
+def test_error_response_preserves_incoming_request_id():
+    request_id = "trace-error-456"
+
+    response = TestClient(
+        app,
+        raise_server_exceptions=False,
+    ).get(
+        "/test",
+        headers={"X-Request-ID": request_id},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == request_id
