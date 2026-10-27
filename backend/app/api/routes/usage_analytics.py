@@ -2,7 +2,7 @@
 from datetime import date
 from decimal import Decimal
 from uuid import UUID
-
+from app.api.dependencies.rate_limit import enforce_rate_limit
 from pydantic import BaseModel, ConfigDict
 
 from app.ai.providers.usage_analytics import (
@@ -15,7 +15,10 @@ from app.api.dependencies.security import require_api_key
 router = APIRouter(
     prefix="/analytics/llm-usage",
     tags=["LLM Usage Analytics"],
-    dependencies=[Depends(require_api_key)],
+    dependencies=[
+        Depends(require_api_key),
+        Depends(enforce_rate_limit),
+    ],
 )
 
 

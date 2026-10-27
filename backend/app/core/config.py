@@ -119,6 +119,14 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+    # ==========================================================
+    # Rate Limiting
+    # ==========================================================
+
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_REQUESTS: int = 20
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_KEY_SECRET: str = ""
 
     # ==========================================================
     # Azure Blob Storage

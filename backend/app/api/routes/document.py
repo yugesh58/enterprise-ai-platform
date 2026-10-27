@@ -25,7 +25,7 @@ from app.api.dependencies.document import (
 )
 
 from app.schemas.search import SearchRequest
-
+from app.api.dependencies.rate_limit import enforce_rate_limit
 from app.enums.document_status import DocumentStatus
 from app.services.document.document_indexing_service import (
     DocumentIndexingService,
@@ -41,7 +41,10 @@ logger = get_logger(__name__)
 router = APIRouter(
     prefix="/documents",
     tags=["Documents"],
-    dependencies=[Depends(require_api_key)],
+    dependencies=[
+        Depends(require_api_key),
+        Depends(enforce_rate_limit),
+    ],
 )
 
 

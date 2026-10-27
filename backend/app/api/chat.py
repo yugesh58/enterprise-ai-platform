@@ -3,7 +3,7 @@ from uuid import uuid4
 import json
 
 from fastapi.responses import StreamingResponse
-
+from app.api.dependencies.rate_limit import enforce_rate_limit
 from app.agents.agent_dispatcher import dispatch_agent
 from app.agents.rag_agent import RAGAgent
 from app.schemas.agent_request import AgentRequest
@@ -16,9 +16,11 @@ from app.api.dependencies.security import require_api_key
 
 
 router = APIRouter(
-    dependencies=[Depends(require_api_key)],
+    dependencies=[
+        Depends(require_api_key),
+        Depends(enforce_rate_limit),
+    ],
 )
-
 memory = get_memory_provider()
 
 
