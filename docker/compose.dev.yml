@@ -32,6 +32,46 @@ services:
       - enterprise-ai-network
 
 
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+
+    container_name: enterprise-ai-backend
+    restart: unless-stopped
+
+    env_file:
+      - ../backend/.env
+
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+
+      DOCUMENT_DATABASE_HOST: postgres
+      DOCUMENT_DATABASE_PORT: 5432
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+    networks:
+      - enterprise-ai-network
+
+
+
   redis:
     image: redis:8-alpine
     container_name: enterprise-ai-redis

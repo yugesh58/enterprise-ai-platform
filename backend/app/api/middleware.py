@@ -13,7 +13,7 @@ from app.core.metrics import (
     HTTP_REQUESTS_TOTAL,
     HTTP_REQUEST_DURATION_SECONDS,
 )
-
+from starlette.routing import Match
 logger = get_logger(__name__)
 
 # Restrict IDs to a safe, bounded character set.
@@ -36,15 +36,37 @@ def _get_request_id(scope: Scope) -> str:
     return str(uuid4())
 
 def _get_route_template(scope: Scope) -> str:
-    """Return a bounded route label, never the raw URL."""
+    """Resolve a bounded route template without using raw URL paths."""
     route = scope.get("route")
     path = getattr(route, "path", None)
 
     if isinstance(path, str) and path:
         return path
 
-    return "__unmatched__"
+    app = scope.get("app")
+    router = getattr(app, "router", None)
+    routes = getattr(router, "routes", [])
 
+    partial_match = None
+
+    for candidate in routes:
+        try:
+            match, _ = candidate.matches(scope)
+        except Exception:
+            continue
+
+        candidate_path = getattr(candidate, "path", None)
+
+        if not isinstance(candidate_path, str) or not candidate_path:
+            continue
+
+        if match == Match.FULL:
+            return candidate_path
+
+        if match == Match.PARTIAL and partial_match is None:
+            partial_match = candidate_path
+
+    return partial_match or "__unmatched__"
 class RequestContextMiddleware:
     """Attach a correlation ID and log completion for each HTTP request."""
 

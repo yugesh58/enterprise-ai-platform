@@ -17,8 +17,67 @@ from openai import (
     BadRequestError,
     RateLimitError,
 )
+from app.core.metrics import (
+    LLM_REQUESTS_TOTAL,
+    LLM_REQUEST_DURATION_SECONDS,
+    LLM_TOKENS_TOTAL,
+    LLM_ESTIMATED_COST_USD_TOTAL,
+)
 
 logger = get_logger(__name__)
+
+
+def _record_llm_metrics(
+    *,
+    provider: str,
+    model: str,
+    operation: str,
+    duration_ms: float,
+    outcome: str,
+    usage: dict[str, int] | None = None,
+    cost_fields: dict[str, float] | None = None,
+    error_type: str | None = None,
+) -> None:
+    """Record LLM metrics without affecting model execution."""
+    try:
+        labels = {
+            "provider": provider,
+            "model": model,
+            "operation": operation,
+            "outcome": outcome,
+        }
+
+        LLM_REQUESTS_TOTAL.labels(
+            **labels,
+            error_type=error_type or "none",
+        ).inc()
+
+        LLM_REQUEST_DURATION_SECONDS.labels(**labels).observe(
+            max(duration_ms, 0.0) / 1000
+        )
+
+        usage = usage or {}
+
+        for token_type in ("input_tokens", "output_tokens"):
+            token_count = usage.get(token_type, 0)
+
+            if token_count > 0:
+                LLM_TOKENS_TOTAL.labels(
+                    provider=provider,
+                    model=model,
+                    token_type=token_type,
+                ).inc(token_count)
+
+        estimated_cost = (cost_fields or {}).get("estimated_cost_usd")
+
+        if estimated_cost is not None and estimated_cost > 0:
+            LLM_ESTIMATED_COST_USD_TOTAL.labels(
+                provider=provider,
+                model=model,
+            ).inc(estimated_cost)
+
+    except Exception:
+        logger.exception("Failed to record LLM Prometheus metrics")
 def _classify_llm_error(exc: Exception) -> str:
     """Map provider exceptions to stable diagnostic categories."""
     if isinstance(exc, RateLimitError):
@@ -146,10 +205,11 @@ def observe_invoke(
     operation: str,
     provider: str,
     model: str,
-    call: Any,  
-    ) -> Any:
+    call: Any,
+) -> Any:
     """Observe and persist a synchronous model invocation."""
     start = time.perf_counter()
+    metrics_recorded = False
 
     try:
         response = call()
@@ -160,6 +220,16 @@ def observe_invoke(
             model=model,
             usage=usage,
         )
+        _record_llm_metrics(
+            provider=provider,
+            model=model,
+            operation=operation,
+            duration_ms=duration_ms,
+            outcome="success",
+            usage=usage,
+            cost_fields=cost_fields,
+        )
+        metrics_recorded = True
 
         logger.info(
             "LLM call completed",
@@ -189,6 +259,15 @@ def observe_invoke(
     except Exception as exc:
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         error_type = _classify_llm_error(exc)
+        if not metrics_recorded:
+            _record_llm_metrics(
+                provider=provider,
+                model=model,
+                operation=operation,
+                duration_ms=duration_ms,
+                outcome="failure",
+                error_type=error_type,
+            )
 
         logger.exception(
             "LLM call failed",
@@ -222,6 +301,7 @@ async def observe_ainvoke(
 ) -> Any:
     """Observe and persist an asynchronous model invocation."""
     start = time.perf_counter()
+    metrics_recorded = False
 
     try:
         response = await call()
@@ -232,6 +312,17 @@ async def observe_ainvoke(
             model=model,
             usage=usage,
         )
+
+        _record_llm_metrics(
+            provider=provider,
+            model=model,
+            operation=operation,
+            duration_ms=duration_ms,
+            outcome="success",
+            usage=usage,
+            cost_fields=cost_fields,
+        )
+        metrics_recorded = True
 
         logger.info(
             "LLM call completed",
@@ -261,6 +352,15 @@ async def observe_ainvoke(
     except Exception as exc:
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         error_type = _classify_llm_error(exc)
+        if not metrics_recorded:
+            _record_llm_metrics(
+                provider=provider,
+                model=model,
+                operation=operation,
+                duration_ms=duration_ms,
+                outcome="failure",
+                error_type=error_type,
+            )
 
         logger.exception(
             "LLM call failed",
@@ -295,6 +395,7 @@ def observe_stream(
     start = time.perf_counter()
     chunk_count = 0
     usage: dict[str, int] = {}
+    metrics_recorded = False
 
     try:
         for chunk in chunks:
@@ -312,6 +413,16 @@ def observe_stream(
             model=model,
             usage=usage,
         )
+        _record_llm_metrics(
+            provider=provider,
+            model=model,
+            operation="stream",
+            duration_ms=duration_ms,
+            outcome="success",
+            usage=usage,
+            cost_fields=cost_fields,
+        )
+        metrics_recorded = True
 
         logger.info(
             "LLM stream completed",
@@ -345,6 +456,17 @@ def observe_stream(
             usage=usage,
         )
         error_type = _classify_llm_error(exc)
+        if not metrics_recorded:
+            _record_llm_metrics(
+                provider=provider,
+                model=model,
+                operation="stream",
+                duration_ms=duration_ms,
+                outcome="failure",
+                usage=usage,
+                cost_fields=cost_fields,
+                error_type=error_type,
+            )
 
         logger.exception(
             "LLM stream failed",
