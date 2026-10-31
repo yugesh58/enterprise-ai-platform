@@ -11,7 +11,7 @@ class LocalStorageProvider(FileStorageProvider):
     """
 
     def __init__(self, root_directory: Path) -> None:
-        self._root_directory = root_directory
+        self._root_directory = root_directory.resolve()
         self._root_directory.mkdir(
             parents=True,
             exist_ok=True,
@@ -19,9 +19,20 @@ class LocalStorageProvider(FileStorageProvider):
 
     def _resolve_path(self, path: str | Path) -> Path:
         """
-        Convert a string path to Path if necessary.
+        Resolve a storage path and ensure it remains inside the storage root.
         """
-        return path if isinstance(path, Path) else Path(path)
+        candidate = Path(path)
+
+        if not candidate.is_absolute():
+            candidate = self._root_directory / candidate
+
+        root = self._root_directory.resolve()
+        resolved = candidate.resolve()
+
+        if not resolved.is_relative_to(root):
+            raise ValueError("Storage path is outside the allowed directory.")
+
+        return resolved
 
     def save(
         self,

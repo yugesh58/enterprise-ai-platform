@@ -1,7 +1,9 @@
 import hashlib
 import hmac
+from itertools import count
 import time
 from functools import lru_cache
+from urllib import response
 from uuid import uuid4
 
 import redis
@@ -12,6 +14,7 @@ from app.api.dependencies.security import (
     require_api_key,
 )
 from app.core.config import settings
+from fastapi import Depends, HTTPException, Response, Security, status
 
 
 @lru_cache(maxsize=1)
@@ -66,6 +69,7 @@ return {1, 0, count + 1}
 
 
 def enforce_rate_limit(
+    response: Response,
     api_key: str | None = Security(api_key_header),
     _authenticated: None = Depends(require_api_key),
 ) -> None:
@@ -120,6 +124,14 @@ def enforce_rate_limit(
 
     allowed, retry_after, count = map(int, result)
 
+    response.headers["X-RateLimit-Limit"] = str(
+    settings.RATE_LIMIT_REQUESTS
+)
+
+    response.headers["X-RateLimit-Remaining"] = str(
+        max(0, settings.RATE_LIMIT_REQUESTS - count)
+    )
+
     if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -128,5 +140,5 @@ def enforce_rate_limit(
                 "Retry-After": str(retry_after),
                 "X-RateLimit-Limit": str(settings.RATE_LIMIT_REQUESTS),
                 "X-RateLimit-Remaining": "0",
-            },
-        )
+                },
+             )

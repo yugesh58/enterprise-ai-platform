@@ -1,7 +1,7 @@
 
 from unittest.mock import Mock
 from uuid import uuid4
-
+from app.api.dependencies.rate_limit import enforce_rate_limit
 import pytest
 from fastapi.testclient import TestClient
 
@@ -276,3 +276,83 @@ def test_document_chat_rejects_missing_question(
     assert response.status_code == 422
     chat_service.chat.assert_not_called()
     id="80426"
+def test_upload_rejects_unsupported_extension(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "malware.exe",
+                b"some content",
+                "application/octet-stream",
+            )
+        },
+    )
+
+    assert response.status_code == 415
+    assert "Unsupported file type" in response.json()["error"]["message"]
+def test_upload_rejects_mime_type_mismatch(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "document.pdf",
+                b"%PDF-1.7 test content",
+                "text/plain",
+            )
+        },
+    )
+
+    assert response.status_code == 415
+    assert "content type do not match" in response.json()["error"]["message"]
+def test_upload_rejects_invalid_pdf_content(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "document.pdf",
+                b"This is not a PDF",
+                "application/pdf",
+            )
+        },
+    )
+
+    assert response.status_code == 415
+    assert "Invalid PDF file content" in response.json()["error"]["message"]
+
+
+def test_upload_rejects_invalid_utf8_text(client):
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "document.txt",
+                b"\xff\xfe\xfa",
+                "text/plain",
+            )
+        },
+    )
+
+    assert response.status_code == 415
+    assert "UTF-8 is required" in response.json()["error"]["message"]
+def test_upload_rejects_file_exceeding_size_limit(
+    client,
+    monkeypatch,
+):
+    monkeypatch.setattr(settings, "MAX_UPLOAD_SIZE_MB", 1)
+
+    # Isolate this test from shared Redis rate-limit state.
+    app.dependency_overrides[enforce_rate_limit] = lambda: None
+
+    response = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "large.txt",
+                b"a" * (1024 * 1024 + 1),
+                "text/plain",
+            )
+        },
+    )
+
+    assert response.status_code == 413
+    assert "maximum upload size" in response.json()["error"]["message"]

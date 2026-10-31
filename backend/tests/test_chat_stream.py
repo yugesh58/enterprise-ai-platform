@@ -101,12 +101,15 @@ def test_sql_stream_returns_supported_message(mock_router):
     assert events[-1][0] == "done"
 
 
+@patch("app.api.chat.logger.error")
 @patch("app.api.chat.RAGAgent")
 @patch("app.api.chat.route_question", return_value="rag")
 def test_stream_returns_safe_error_event(
     mock_router,
     mock_rag_agent,
-):
+    mock_logger_error,
+        ):
+
     def failing_stream(_request):
         yield "Partial response "
         raise RuntimeError("internal database credentials")
@@ -132,6 +135,10 @@ def test_stream_returns_safe_error_event(
     )
 
     assert "internal database credentials" not in response.text
+    mock_logger_error.assert_called_once_with(
+    "Streaming failed: error_type=%s",
+    "RuntimeError",
+    )
 
 
 def test_stream_rejects_empty_question():

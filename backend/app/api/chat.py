@@ -13,7 +13,9 @@ from app.storage.memory.factory import get_memory_provider
 from app.core.request_context import RequestContext
 from fastapi import APIRouter, Depends
 from app.api.dependencies.security import require_api_key
+from app.core.logging import get_logger
 
+logger = get_logger(__name__)
 
 router = APIRouter(
     dependencies=[
@@ -94,7 +96,6 @@ async def chat(request: ChatRequest):
     }
 
 
-@router.post("/chat/stream")
 
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
@@ -182,15 +183,21 @@ async def chat_stream(request: ChatRequest):
                 {"conversation_id": conversation_id},
             )
 
-        except Exception:
+        except Exception as exc:
+            # Log only the exception type, never the raw message or traceback.
+            logger.error(
+            "Streaming failed: error_type=%s",
+            type(exc).__name__,
+            )
+
             # Never expose internal exception details to clients.
             yield encode_event(
-                "error",
+                    "error",
                 {
                     "message": (
-                        "An error occurred while streaming "
-                        "the response."
-                    )
+                                "An error occurred while streaming "
+                                "the response."
+                        ),
                 },
             )
 

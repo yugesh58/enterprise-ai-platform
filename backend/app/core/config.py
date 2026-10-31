@@ -1,6 +1,6 @@
 from functools import lru_cache
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field,model_validator
 
 
 class Settings(BaseSettings):
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Enterprise AI Platform"
     API_VERSION: str = "v1"
     ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     # ==========================================================
     # API Security
     # ==========================================================
@@ -147,8 +147,13 @@ class Settings(BaseSettings):
     # ==========================================================
 
     LOG_LEVEL: str = "INFO"
-
     UPLOAD_DIRECTORY: str = "uploads"
+
+    # ==========================================================
+    # Document Upload Security
+    # ==========================================================
+
+    MAX_UPLOAD_SIZE_MB: int = Field(default=10, gt=0)
 
     # ==========================================================
     # Vector Store
@@ -164,6 +169,43 @@ class Settings(BaseSettings):
         f"@{self.DATABASE_HOST}:{self.DATABASE_PORT}"
         f"/{self.DATABASE_NAME}"
     )
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        if self.ENVIRONMENT.lower() != "production":
+            return self
+
+        if self.DEBUG:
+            raise ValueError(
+            "DEBUG must be disabled in production."
+        )
+
+        if not self.API_AUTH_ENABLED:
+            raise ValueError(
+            "API authentication must be enabled in production."
+        )
+
+        if len(self.API_KEY) < 32:
+            raise ValueError(
+            "Production API_KEY must contain at least 32 characters."
+        )
+
+        if not self.RATE_LIMIT_ENABLED:
+            raise ValueError(
+            "Rate limiting must be enabled in production."
+        )
+
+        if len(self.RATE_LIMIT_KEY_SECRET) < 32:
+            raise ValueError(
+            "Production RATE_LIMIT_KEY_SECRET must contain "
+            "at least 32 characters."
+        )
+
+        if self.API_KEY == self.RATE_LIMIT_KEY_SECRET:
+            raise ValueError(
+            "API_KEY and RATE_LIMIT_KEY_SECRET must be different."
+            )
+
+        return self
 
 @lru_cache
 def get_settings() -> Settings:

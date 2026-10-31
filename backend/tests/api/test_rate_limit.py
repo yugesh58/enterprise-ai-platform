@@ -50,6 +50,8 @@ def test_request_is_allowed(rate_limit_app, monkeypatch):
     )
 
     assert response.status_code == 200
+    assert response.headers["X-RateLimit-Limit"] == "2"
+    assert response.headers["X-RateLimit-Remaining"] == "1"
     fake_redis.eval.assert_called_once()
 
 
@@ -68,6 +70,7 @@ def test_limit_exceeded_returns_429(rate_limit_app, monkeypatch):
     )
     assert response.headers["Retry-After"] == "17"
     assert response.headers["X-RateLimit-Remaining"] == "0"
+    assert response.headers["X-RateLimit-Limit"] == "2"
 
 
 def test_missing_api_key_returns_401(rate_limit_app, monkeypatch):
