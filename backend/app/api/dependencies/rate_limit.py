@@ -1,34 +1,23 @@
 import hashlib
 import hmac
-from itertools import count
 import time
-from functools import lru_cache
-from urllib import response
 from uuid import uuid4
 
 import redis
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import (
+    Depends,
+    HTTPException,
+    Response,
+    Security,
+    status,
+)
 
 from app.api.dependencies.security import (
     api_key_header,
     require_api_key,
 )
 from app.core.config import settings
-from fastapi import Depends, HTTPException, Response, Security, status
-
-
-@lru_cache(maxsize=1)
-def get_redis_client() -> redis.Redis:
-    """Return a shared Redis client with a connection pool."""
-    return redis.Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=settings.REDIS_DB,
-        socket_connect_timeout=2,
-        socket_timeout=2,
-        decode_responses=True,
-    )
-
+from app.storage.redis_client import get_redis_client
 
 SLIDING_WINDOW_SCRIPT = """
 local key = KEYS[1]

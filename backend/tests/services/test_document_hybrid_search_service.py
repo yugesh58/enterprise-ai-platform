@@ -56,7 +56,7 @@ def test_relevant_semantic_result_survives(service):
 
     results = service._fuse_results(
         semantic_results=[result],
-        keyword_results=[],
+        keyword_rankings=[],
         top_k=5,
         original_keyword_ids=set(),
     )
@@ -76,7 +76,7 @@ def test_weak_semantic_result_without_keyword_match_is_filtered(service):
 
     results = service._fuse_results(
         semantic_results=[result],
-        keyword_results=[],
+        keyword_rankings=[],
         top_k=5,
         original_keyword_ids=set(),
     )
@@ -94,7 +94,7 @@ def test_original_keyword_match_survives_low_semantic_score(service):
 
     results = service._fuse_results(
         semantic_results=[result],
-        keyword_results=[],
+        keyword_rankings=[],
         top_k=5,
         original_keyword_ids={"exact-match"},
     )
@@ -106,7 +106,7 @@ def test_original_keyword_match_survives_low_semantic_score(service):
 def test_no_candidates_returns_empty_list(service):
     results = service._fuse_results(
         semantic_results=[],
-        keyword_results=[],
+        keyword_rankings=[],
         top_k=5,
         original_keyword_ids=set(),
     )
@@ -140,7 +140,7 @@ def test_rrf_order_is_preserved_after_filtering(service):
             irrelevant,
             relevant_second,
         ],
-        keyword_results=[],
+        keyword_rankings=[],
         top_k=5,
         original_keyword_ids=set(),
     )
@@ -150,3 +150,98 @@ def test_rrf_order_is_preserved_after_filtering(service):
         "second",
     ]
     assert results[0].score > results[1].score
+
+
+
+def test_semantic_search_receives_requested_candidate_limit():
+    from unittest.mock import patch
+
+    from app.services.document.document_search_service import (
+        DocumentSearchService,
+    )
+
+    provider = MagicMock()
+    embeddings = MagicMock()
+    embeddings.embed_query.return_value = [0.1, 0.2]
+    provider.search.return_value = []
+
+    with patch(
+        "app.services.document.document_search_service.get_embeddings",
+        return_value=embeddings,
+    ):
+        search_service = DocumentSearchService(provider)
+
+    search_service.search(
+        query="employee leave policy",
+        top_k=28,
+        apply_threshold=False,
+    )
+
+    assert provider.search.call_args.kwargs["limit"] == 28
+
+
+def test_hybrid_search_requests_candidate_k_from_semantic_service(service):
+    service._semantic_search.search.return_value = []
+    service._keyword_search.search.return_value = []
+    service._query_expansion.expand.return_value = []
+
+    service.search(query="employee leave policy", top_k=7)
+
+    assert service._semantic_search.search.call_args.kwargs["top_k"] == 28
+
+
+def test_weighted_rrf_prioritizes_original_keyword_ranking(service):
+    original_result = make_result("original", 0.4, "keyword")
+    expanded_result = make_result(
+        "expanded",
+        0.5,
+        "semantic",
+        semantic_score=settings.DOCUMENT_MIN_SCORE + 0.1,
+    )
+
+    results = service._fuse_results(
+        semantic_results=[expanded_result],
+        keyword_rankings=[
+            ([original_result], 2.0),
+            ([make_result("expanded", 0.5, "keyword")], 0.5),
+        ],
+        top_k=5,
+        original_keyword_ids={"original"},
+    )
+
+    scores = {result.chunk_id: result.score for result in results}
+
+    assert "original" in scores
+    assert "expanded" in scores
+    assert scores["original"] > scores["expanded"]
+
+
+
+def test_hybrid_search_normalizes_string_document_id(service):
+    document_id = uuid4()
+
+    service._semantic_search.search.return_value = []
+    service._keyword_search.search.return_value = []
+    service._query_expansion.expand.return_value = []
+
+    service.search(
+        query="employee leave policy",
+        document_id=str(document_id),
+    )
+
+    assert (
+        service._keyword_search.search.call_args.kwargs["document_id"]
+        == document_id
+    )
+    assert (
+        service._semantic_search.search.call_args.kwargs["document_id"]
+        == str(document_id)
+    )
+
+
+def test_hybrid_search_rejects_invalid_document_id(service):
+    with pytest.raises(ValueError, match="valid UUID"):
+        service.search(
+            query="employee leave policy",
+            document_id="not-a-valid-uuid",
+        )

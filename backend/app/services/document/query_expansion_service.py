@@ -92,6 +92,19 @@ class QueryExpansionService:
         ],
     }
 
+    def __init__(
+        self,
+        max_expansions: int = 5,
+        max_keyword_terms: int = 2,
+    ) -> None:
+        if max_expansions < 0:
+            raise ValueError("max_expansions cannot be negative")
+        if max_keyword_terms < 0:
+            raise ValueError("max_keyword_terms cannot be negative")
+
+        self.max_expansions = max_expansions
+        self.max_keyword_terms = max_keyword_terms
+
     def expand(self, query: str) -> list[str]:
         """
         Return an ordered list of retrieval queries.
@@ -207,7 +220,7 @@ class QueryExpansionService:
             and len(word) >= 3
         ]
 
-        expansions.extend(meaningful_words)
+        expansions.extend(meaningful_words[: self.max_keyword_terms])
 
         # ---------------------------------------------------------
         # 4. Original query
@@ -219,10 +232,18 @@ class QueryExpansionService:
         # 5. Remove duplicates while preserving order
         # ---------------------------------------------------------
 
-        return list(
+        unique_expansions = list(
             dict.fromkeys(
-                expansion.strip()
-                for expansion in expansions
-                if expansion.strip()
+                item.strip()
+                for item in expansions
+                if item.strip()
             )
         )
+
+        additional_expansions = [
+            item
+            for item in unique_expansions
+            if item.casefold() != query.casefold()
+        ]
+
+        return additional_expansions[: self.max_expansions] + [query]

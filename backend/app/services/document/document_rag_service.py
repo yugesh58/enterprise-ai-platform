@@ -44,18 +44,20 @@ class DocumentRAGService:
             history=chat_history,
         )
 
-    # Preserve the source formatting expected by RAGAgent.
+        # Preserve source attribution for semantic and keyword results.
         sources = [
             {
-            "source": getattr(
-                doc,
-                "metadata",
-                {},
-            ).get("source", "Unknown"),
+                "source": (
+                    getattr(doc, "source", None)
+                    or (getattr(doc, "metadata", None) or {}).get(
+                        "source", "Unknown"
+                    )
+                ),
+                "page_number": getattr(doc, "page_number", None),
+                "chunk_index": getattr(doc, "chunk_index", None),
             }
-        for doc in documents
+            for doc in documents
         ]
-
         return {
             "answer": answer_text,
             "sources": sources,

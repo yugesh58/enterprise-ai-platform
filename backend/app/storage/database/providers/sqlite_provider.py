@@ -1,3 +1,4 @@
+
 from pathlib import Path
 from typing import Any
 
@@ -13,15 +14,16 @@ sqlite_engine = create_engine(
 )
 
 
+def dispose_sqlite_engine() -> None:
+    """Dispose the shared SQLite engine during application shutdown."""
+    sqlite_engine.dispose()
+
+
 class SQLiteProvider(DatabaseProvider):
-    """
-    SQLite database provider used by the SQL Agent.
-    """
+    """SQLite database provider used by the SQL Agent."""
 
     def connect(self):
-        """
-        Return a SQLAlchemy database connection.
-        """
+        """Return a SQLAlchemy database connection."""
         return sqlite_engine.connect()
 
     def execute(
@@ -32,12 +34,8 @@ class SQLiteProvider(DatabaseProvider):
         params = params or {}
 
         with self.connect() as connection:
-            result = connection.execute(
-                text(query),
-                params,
-            )
+            result = connection.execute(text(query), params)
             connection.commit()
-
             return result
 
     def fetch_one(
@@ -45,15 +43,10 @@ class SQLiteProvider(DatabaseProvider):
         query: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
-
         params = params or {}
 
         with self.connect() as connection:
-            result = connection.execute(
-                text(query),
-                params,
-            )
-
+            result = connection.execute(text(query), params)
             row = result.fetchone()
 
             if row is None:
@@ -66,14 +59,10 @@ class SQLiteProvider(DatabaseProvider):
         query: str,
         params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-
         params = params or {}
 
         with self.connect() as connection:
-            result = connection.execute(
-                text(query),
-                params,
-            )
+            result = connection.execute(text(query), params)
 
             return [
                 dict(row._mapping)
@@ -81,24 +70,13 @@ class SQLiteProvider(DatabaseProvider):
             ]
 
     def get_schema(self) -> str:
-        """
-        Return a human-readable representation
-        of the SQLite database schema.
-        """
-
+        """Return a human-readable representation of the SQLite schema."""
         inspector = inspect(sqlite_engine)
-
         schema_info = []
 
         for table in inspector.get_table_names():
-
             columns = inspector.get_columns(table)
-
-            column_names = [
-                column["name"]
-                for column in columns
-            ]
-
+            column_names = [column["name"] for column in columns]
             schema_info.append(
                 f"{table}({', '.join(column_names)})"
             )
@@ -106,7 +84,5 @@ class SQLiteProvider(DatabaseProvider):
         return "\n".join(schema_info)
 
     def close(self) -> None:
-        """
-        Dispose SQLite engine resources.
-        """
-        sqlite_engine.dispose()
+        """No-op: the shared SQLite engine is managed by application lifespan."""
+        return None

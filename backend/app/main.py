@@ -1,14 +1,30 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from app.api.middleware import RequestContextMiddleware
 
 from app.api.chat import router as chat_router
+from app.api.exception_handlers import register_exception_handlers
+from app.api.middleware import RequestContextMiddleware
 from app.api.routes.document import router as document_router
 from app.api.routes.health import router as health_router
-from app.api.exception_handlers import register_exception_handlers
-from app.api.routes.usage_analytics import router as usage_analytics_router
 from app.api.routes.metrics import router as metrics_router
-app = FastAPI()
+from app.api.routes.usage_analytics import router as usage_analytics_router
+from app.storage.database.connection import dispose_database_engines
+from app.storage.database.providers.sqlite_provider import (
+    dispose_sqlite_engine,
+)
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage shared database engine lifecycle."""
+
+    try:
+        yield
+    finally:
+        dispose_database_engines()
+        dispose_sqlite_engine()
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(health_router)
 app.include_router(chat_router)

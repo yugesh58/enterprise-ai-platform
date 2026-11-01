@@ -81,6 +81,33 @@ class DocumentChunkRepository:
 
         self._connection.execute(statement)
         self._connection.commit()
+    def replace_by_document_id(
+        self,
+        document_id: UUID,
+        chunks: list[dict],
+        ) -> None:
+        """
+        Atomically replace all chunks belonging to a document.
+
+        The caller owns the transaction boundary.
+        """
+        try:
+            self._connection.execute(
+            delete(document_chunks).where(
+                document_chunks.c.document_id == document_id
+            )
+        )
+
+            if chunks:
+                self._connection.execute(
+                    insert(document_chunks).values(chunks)
+                )
+
+            self._connection.commit()
+
+        except Exception:
+            self._connection.rollback()
+            raise
 
     def keyword_search(
         self,

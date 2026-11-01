@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-
+import pytest
 from app.core.config import settings
 from app.main import app
 
@@ -10,7 +10,9 @@ settings.API_AUTH_ENABLED = True
 settings.API_KEY = TEST_API_KEY
 
 client = TestClient(app)
-
+@pytest.fixture(autouse=True)
+def disable_rate_limiting_for_analytics_tests(monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
 REQUEST_ID = "ce9b2113-493e-48b2-b4e5-b45d72c65a91"
 
 

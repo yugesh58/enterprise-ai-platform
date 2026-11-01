@@ -40,12 +40,20 @@ class DocumentHybridSearchService:
         self,
         query: str,
         top_k: int = 5,
-        document_id: UUID | None = None,
+        document_id: UUID | str | None = None,
     ) -> list[RetrievalResult]:
         """Perform hybrid document retrieval with relevance filtering."""
 
         if not query.strip() or top_k <= 0:
             return []
+
+        if document_id is not None:
+            try:
+                document_id = UUID(str(document_id))
+            except (ValueError, TypeError, AttributeError) as exc:
+                raise ValueError(
+                    "document_id must be a valid UUID"
+                ) from exc
 
         candidate_k = max(top_k * 4, 20)
         document_id_filter = str(document_id) if document_id else None
@@ -74,46 +82,49 @@ class DocumentHybridSearchService:
             for result in original_keyword_results
         }
 
-        # 3. Retrieve additional candidates through query expansion.
+        # 3. Preserve each expanded query as an independent ranking.
         expanded_queries = self._query_expansion.expand(query)
-        expanded_keyword_results: list[dict] = []
+        keyword_rankings: list[tuple[list[RetrievalResult], float]] = []
+
+        original_keyword_results = self._normalize_keyword_results(
+            original_keyword_results
+        )
+        keyword_rankings.append((original_keyword_results, 2.0))
+
+        seen_expansions = {query.strip().casefold()}
 
         for expanded_query in expanded_queries:
-            if expanded_query.strip().casefold() == query.strip().casefold():
+            normalized_query = expanded_query.strip().casefold()
+
+            if not normalized_query or normalized_query in seen_expansions:
                 continue
 
-            expanded_keyword_results.extend(
-                self._keyword_search.search(
-                    query=expanded_query,
-                    top_k=candidate_k,
-                    document_id=document_id,
-                )
+            seen_expansions.add(normalized_query)
+
+            expanded_results = self._keyword_search.search(
+                query=expanded_query,
+                top_k=candidate_k,
+                document_id=document_id,
             )
 
-        expanded_keyword_results = self._deduplicate_keyword_results(
-            expanded_keyword_results
-        )
+            expanded_results = self._deduplicate_keyword_results(
+                expanded_results
+            )
 
-        # Merge candidates, preferring the original-query score when
-        # a chunk appears in both the original and expanded results.
-        keyword_by_id = {
-            str(result["id"]): result
-            for result in expanded_keyword_results
-        }
+            normalized_results = self._normalize_keyword_results(
+                expanded_results
+            )
 
-        for result in original_keyword_results:
-            keyword_by_id[str(result["id"])] = result
+            if normalized_results:
+                keyword_rankings.append((normalized_results, 0.5))
 
-        # 4. Normalize results while preserving raw scores.
+        # 4. Normalize semantic results.
         semantic = self._normalize_semantic_results(semantic_results)
-        keyword = self._normalize_keyword_results(
-            list(keyword_by_id.values())
-        )
 
-        # 5. Fuse rankings and apply relevance filtering.
+        # 5. Fuse independent rankings and apply relevance filtering.
         return self._fuse_results(
             semantic_results=semantic,
-            keyword_results=keyword,
+            keyword_rankings=keyword_rankings,
             top_k=top_k,
             original_keyword_ids=original_keyword_ids,
         )
@@ -201,23 +212,28 @@ class DocumentHybridSearchService:
             ):
                 best_results[chunk_id] = result
 
-        return list(best_results.values())
+        return sorted(
+            best_results.values(),
+            key=lambda result: float(result["keyword_score"]),
+            reverse=True,
+        )
 
     def _fuse_results(
         self,
         semantic_results: list[RetrievalResult],
-        keyword_results: list[RetrievalResult],
+        keyword_rankings: list[tuple[list[RetrievalResult], float]],
         top_k: int,
         original_keyword_ids: set[str],
     ) -> list[RetrievalResult]:
         """
-        Fuse semantic and keyword rankings using Reciprocal Rank Fusion.
+        Fuse independent rankings using weighted Reciprocal Rank Fusion.
 
         A result survives the relevance gate if:
-        - its original semantic similarity meets DOCUMENT_MIN_SCORE, or
-        - the original user query produced a PostgreSQL keyword match.
+        - its semantic score meets DOCUMENT_MIN_SCORE, or
+        - the original user query produced a keyword match.
 
-        RRF scores are used for ranking, not as relevance thresholds.
+        Original-query keyword evidence receives greater weight than
+        expanded-query evidence.
         """
 
         scores: dict[str, float] = {}
@@ -225,7 +241,7 @@ class DocumentHybridSearchService:
 
         rrf_k = 60
 
-        # Semantic ranking.
+        # Semantic ranking: weight 1.0.
         for rank, result in enumerate(semantic_results, start=1):
             chunk_id = result.chunk_id
             scores[chunk_id] = scores.get(chunk_id, 0.0) + (
@@ -233,31 +249,38 @@ class DocumentHybridSearchService:
             )
             results[chunk_id] = result
 
-        # Keyword ranking.
-        for rank, result in enumerate(keyword_results, start=1):
-            chunk_id = result.chunk_id
-            scores[chunk_id] = scores.get(chunk_id, 0.0) + (
-                1.0 / (rrf_k + rank)
-            )
+        # Each keyword query contributes its own independent ranking.
+        for keyword_results, weight in keyword_rankings:
+            for rank, result in enumerate(keyword_results, start=1):
+                chunk_id = result.chunk_id
+                scores[chunk_id] = scores.get(chunk_id, 0.0) + (
+                    weight / (rrf_k + rank)
+                )
 
-            # Preserve semantic metadata when the same chunk appears
-            # in both retrieval systems.
-            if chunk_id not in results:
-                results[chunk_id] = result
-            elif results[chunk_id].metadata is not None:
-                results[chunk_id].metadata["keyword_score"] = result.score
-                results[chunk_id].metadata["original_keyword_match"] = (
+                if chunk_id not in results:
+                    result.metadata = dict(result.metadata or {})
+                    results[chunk_id] = result
+
+                existing = results[chunk_id]
+                if existing.metadata is None:
+                    existing.metadata = {}
+
+                previous_score = existing.metadata.get("keyword_score", 0.0)
+                existing.metadata["keyword_score"] = max(
+                    float(previous_score),
+                    float(result.score),
+                )
+                existing.metadata["original_keyword_match"] = (
                     chunk_id in original_keyword_ids
                 )
 
-        # Sort by RRF score.
         ranked = sorted(
             results.values(),
             key=lambda result: scores[result.chunk_id],
             reverse=True,
         )
 
-        # Filter using raw semantic similarity or direct keyword evidence.
+        # Preserve the original relevance gate.
         ranked = [
             result
             for result in ranked
@@ -271,8 +294,7 @@ class DocumentHybridSearchService:
             )
         ]
 
-        # Return the final top-k results with hybrid ranking scores.
-        final_results: list[RetrievalResult] = []
+        final_results = []
 
         for result in ranked[:top_k]:
             result.score = scores[result.chunk_id]

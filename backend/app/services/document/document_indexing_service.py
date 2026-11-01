@@ -1,7 +1,8 @@
+
 import time
 import traceback
 from uuid import UUID
-
+from app.services.document.document_index_lock import document_index_lock
 from app.ai.embeddings import get_embeddings
 from app.core.config import settings
 from app.enums.document_status import DocumentStatus
@@ -37,13 +38,26 @@ class DocumentIndexingService:
         self._vector_provider = vector_provider
 
         self._embeddings = get_embeddings()
-
     def index_document(
+        self,
+        document_id: UUID,
+        ) -> None:
+        """Index a document while holding its distributed Redis lock."""
+
+        with document_index_lock(document_id):
+            self._index_document(document_id)
+    def _index_document(
         self,
         document_id: UUID,
     ) -> None:
         """
-        Process a document and index it into PostgreSQL and Qdrant.
+        Process a document and safely replace its existing index.
+
+        New vectors are uploaded before PostgreSQL chunks are replaced.
+        If PostgreSQL replacement fails, newly uploaded vectors are
+        removed as a compensating action.
+
+        PostgreSQL and Qdrant do not support a shared atomic transaction.
         """
 
         print("\n" + "=" * 80)
@@ -68,33 +82,30 @@ class DocumentIndexingService:
             # -----------------------------------------------------------------
             # 1. Read document
             # -----------------------------------------------------------------
-            print("\n[1/7] Reading document from storage...")
+            print("\n[1/8] Reading document from storage...")
 
             pdf_bytes = self._storage.read(
                 document["storage_path"]
             )
 
-            print(
-                f"✅ Read {len(pdf_bytes):,} bytes"
-            )
+            print(f"✅ Read {len(pdf_bytes):,} bytes")
 
             # -----------------------------------------------------------------
-            # 2. Extract PDF
+            # 2. Extract document content
             # -----------------------------------------------------------------
-            print("\n[2/7] Extracting PDF...")
+            print("\n[2/8] Extracting document...")
 
             pdf = self._pdf_processing_service.extract_document(
-                pdf_bytes,filename=document["filename"],
+                pdf_bytes,
+                filename=document["filename"],
             )
 
-            print(
-                f"✅ Pages extracted: {len(pdf.pages)}"
-            )
+            print(f"✅ Pages extracted: {len(pdf.pages)}")
 
             # -----------------------------------------------------------------
-            # 3. Create chunks
+            # 3. Generate chunks
             # -----------------------------------------------------------------
-            print("\n[3/7] Creating chunks...")
+            print("\n[3/8] Creating chunks...")
 
             chunks = self._chunking_service.chunk_document(
                 document_id=document_id,
@@ -102,26 +113,65 @@ class DocumentIndexingService:
                 pdf=pdf,
             )
 
-            print(
-                f"✅ Generated {len(chunks)} chunks"
+            print(f"✅ Generated {len(chunks)} chunks")
+
+            # Capture existing PostgreSQL chunk IDs before changing
+            # either PostgreSQL or Qdrant.
+            existing_chunk_ids = (
+                self._chunk_repository.get_ids_by_document_id(
+                    document_id
+                )
             )
 
+            existing_vector_ids = [
+                str(chunk_id)
+                for chunk_id in existing_chunk_ids
+            ]
+
+            # -----------------------------------------------------------------
+            # Handle empty documents
+            # -----------------------------------------------------------------
             if not chunks:
-                print("⚠️ No chunks generated.")
+                print(
+                    "⚠️ No chunks generated. "
+                    "Clearing existing PostgreSQL chunks."
+                )
+
+                # Remove existing PostgreSQL chunks transactionally.
+                self._chunk_repository.replace_by_document_id(
+                    document_id,
+                    [],
+                )
+
+                # Remove corresponding old Qdrant vectors.
+                try:
+                    self._vector_provider.delete(
+                        collection_name=settings.QDRANT_COLLECTION,
+                        point_ids=existing_vector_ids,
+                    )
+
+                    print("✅ Existing vectors cleaned up")
+
+                except Exception as cleanup_error:
+                    # PostgreSQL replacement has already succeeded.
+                    # Keep the document indexed and log cleanup failure.
+                    print(
+                        "⚠️ Old vector cleanup failed. "
+                        f"Retry required: {cleanup_error}"
+                    )
 
                 self._repository.update_status(
                     document_id,
                     DocumentStatus.INDEXED,
                 )
 
+                print("✅ Empty document indexing completed")
                 return
 
             # -----------------------------------------------------------------
             # 4. Prepare embedding input
             # -----------------------------------------------------------------
-            print(
-                "\n[4/7] Preparing text for embeddings..."
-            )
+            print("\n[4/8] Preparing embedding input...")
 
             texts = [
                 chunk.text
@@ -136,9 +186,7 @@ class DocumentIndexingService:
             # -----------------------------------------------------------------
             # 5. Generate embeddings
             # -----------------------------------------------------------------
-            print(
-                "\n[5/7] Generating embeddings..."
-            )
+            print("\n[5/8] Generating embeddings...")
 
             embeddings = self._embeddings.embed_documents(
                 texts
@@ -156,9 +204,7 @@ class DocumentIndexingService:
             # -----------------------------------------------------------------
             # 6. Create vector points
             # -----------------------------------------------------------------
-            print(
-                "\n[6/7] Creating vector points..."
-            )
+            print("\n[6/8] Creating vector points...")
 
             embedded_chunks = [
                 EmbeddedChunk(
@@ -175,71 +221,15 @@ class DocumentIndexingService:
                 )
             ]
 
-            vector_points = (
-                VectorMapper.to_vector_points(
-                    embedded_chunks
-                )
+            vector_points = VectorMapper.to_vector_points(
+                embedded_chunks
             )
 
             print(
-                f"✅ Created {len(vector_points)} "
-                "vector points"
+                f"✅ Created {len(vector_points)} vector points"
             )
 
-            # -----------------------------------------------------------------
-            # Re-index cleanup
-            # -----------------------------------------------------------------
-            print(
-                "\nPreparing re-index cleanup..."
-            )
-
-            # Delete ALL existing vectors belonging
-            # to this document.
-            #
-            # This is intentionally based on document_id
-            # rather than PostgreSQL chunk IDs so that
-            # stale/orphaned Qdrant vectors are also removed.
-            self._vector_provider.delete_by_filter(
-                collection_name=settings.QDRANT_COLLECTION,
-                filters={
-                    "document_id": str(document_id),
-                },
-            )
-
-            print(
-                "✅ Deleted all existing vectors "
-                "for document from Qdrant"
-            )
-
-            # Delete existing PostgreSQL chunks.
-            existing_chunks = (
-                self._chunk_repository.get_by_document_id(
-                    document_id
-                )
-            )
-
-            print(
-                f"Existing PostgreSQL chunks: "
-                f"{len(existing_chunks)}"
-            )
-
-            if existing_chunks:
-                self._chunk_repository.delete_by_document_id(
-                    document_id
-                )
-
-                print(
-                    f"✅ Deleted {len(existing_chunks)} "
-                    "old chunks from PostgreSQL"
-                )
-
-            # -----------------------------------------------------------------
-            # Persist new chunks
-            # -----------------------------------------------------------------
-            print(
-                "\nPersisting new chunks to PostgreSQL..."
-            )
-
+            # Prepare PostgreSQL records.
             chunk_records = [
                 {
                     "id": chunk.chunk_id,
@@ -252,37 +242,85 @@ class DocumentIndexingService:
                 for chunk in chunks
             ]
 
-            self._chunk_repository.create_many(
-                chunk_records
-            )
-
-            print(
-                f"✅ Persisted {len(chunk_records)} "
-                "chunks to PostgreSQL"
-            )
+            # VectorMapper assigns each point the string form
+            # of its corresponding chunk UUID.
+            new_vector_ids = [
+                str(point.id)
+                for point in vector_points
+            ]
 
             # -----------------------------------------------------------------
-            # 7. Upload vectors to Qdrant
+            # 7. Upload new vectors and replace PostgreSQL chunks
             # -----------------------------------------------------------------
-            print(
-                "\n[7/7] Uploading vectors to Qdrant..."
-            )
+            print("\n[7/8] Uploading replacement vectors to Qdrant...")
 
-            self._vector_provider.upsert(
-                collection_name=settings.QDRANT_COLLECTION,
-                points=vector_points,
-            )
+            try:
+                self._vector_provider.upsert(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    points=vector_points,
+                )
 
-            print(
-                "✅ Successfully uploaded vectors"
-            )
+                print("✅ New vectors uploaded successfully")
+
+                # Replace old chunks and insert new chunks in one
+                # PostgreSQL transaction.
+                self._chunk_repository.replace_by_document_id(
+                    document_id,
+                    chunk_records,
+                )
+
+                print(
+                    f"✅ Replaced PostgreSQL chunks: "
+                    f"{len(chunk_records)}"
+                )
+
+            except Exception:
+                # If Qdrant partially uploaded vectors or PostgreSQL
+                # replacement failed, attempt to remove the new vectors.
+                try:
+                    self._vector_provider.delete(
+                        collection_name=settings.QDRANT_COLLECTION,
+                        point_ids=new_vector_ids,
+                    )
+
+                    print(
+                        "✅ Compensating cleanup of new vectors completed"
+                    )
+
+                except Exception as cleanup_error:
+                    print(
+                        "❌ New vector compensation failed: "
+                        f"{cleanup_error}"
+                    )
+
+                raise
+
+            # -----------------------------------------------------------------
+            # 8. Remove old vectors
+            # -----------------------------------------------------------------
+            print("\n[8/8] Cleaning up old Qdrant vectors...")
+
+            try:
+                self._vector_provider.delete(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    point_ids=existing_vector_ids,
+                )
+
+                print("✅ Old vectors cleaned up")
+
+            except Exception as cleanup_error:
+                # New PostgreSQL chunks and Qdrant vectors are already
+                # committed/available. Do not mark indexing as failed
+                # because cleanup of obsolete vectors failed.
+                print(
+                    "⚠️ Old vector cleanup failed. "
+                    f"Retry/manual cleanup required: {cleanup_error}"
+                )
 
             # -----------------------------------------------------------------
             # Update document status
             # -----------------------------------------------------------------
-            print(
-                "\nUpdating document status..."
-            )
+            print("\nUpdating document status...")
 
             self._repository.update_status(
                 document_id,
@@ -291,61 +329,27 @@ class DocumentIndexingService:
 
             elapsed = time.time() - start_time
 
-            print(
-                "\n" + "=" * 80
-            )
-            print(
-                "🎉 INDEXING COMPLETED SUCCESSFULLY"
-            )
-            print(
-                f"Document ID : {document_id}"
-            )
-            print(
-                f"Chunks      : {len(chunks)}"
-            )
-            print(
-                f"Vectors     : {len(vector_points)}"
-            )
-            print(
-                f"Time Taken  : {elapsed:.2f} seconds"
-            )
-            print(
-                "=" * 80
-            )
+            print("\n" + "=" * 80)
+            print("🎉 INDEXING COMPLETED SUCCESSFULLY")
+            print(f"Document ID : {document_id}")
+            print(f"Chunks      : {len(chunks)}")
+            print(f"Vectors     : {len(vector_points)}")
+            print(f"Time Taken  : {elapsed:.2f} seconds")
+            print("=" * 80)
 
         except Exception as e:
+            print("\n" + "=" * 80)
+            print("❌ INDEXING FAILED")
+            print("=" * 80)
 
-            print(
-                "\n" + "=" * 80
-            )
-            print(
-                "❌ INDEXING FAILED"
-            )
-            print(
-                "=" * 80
-            )
+            print(f"Document ID : {document_id}")
+            print(f"Error Type  : {type(e).__name__}")
+            print(f"Error       : {e}")
 
-            print(
-                f"Document ID : {document_id}"
-            )
-
-            print(
-                f"Error Type  : {type(e).__name__}"
-            )
-
-            print(
-                f"Error       : {e}"
-            )
-
-            print(
-                "\nFull traceback:\n"
-            )
-
+            print("\nFull traceback:\n")
             traceback.print_exc()
 
-            print(
-                "=" * 80
-            )
+            print("=" * 80)
 
             self._repository.update_status(
                 document_id,

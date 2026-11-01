@@ -120,6 +120,8 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+    DOCUMENT_INDEX_LOCK_TTL_SECONDS: int = 3600
+    DOCUMENT_INDEX_LOCK_RENEWAL_INTERVAL_SECONDS: int = 1200
     # ==========================================================
     # Rate Limiting
     # ==========================================================

@@ -39,6 +39,9 @@ class DocumentSearchService:
         during fusion.
         """
 
+        if not query.strip() or top_k <= 0:
+            return []
+
         query_embedding = self._embeddings.embed_query(query)
 
         filters = (
@@ -50,7 +53,7 @@ class DocumentSearchService:
         results = self._vector_provider.search(
             collection_name=settings.QDRANT_COLLECTION,
             query_vector=query_embedding,
-            limit=settings.DOCUMENT_SEARCH_LIMIT,
+            limit=top_k,
             filters=filters,
         )
 
