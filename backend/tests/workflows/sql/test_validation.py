@@ -112,3 +112,79 @@ def test_invalid_sql_stops_after_two_retries():
     }
 
     assert validation_router(state) == "end"
+def validate(query):
+    return validate_sql_node({
+        "sql_query": query,
+        "retry_count": 0,
+    })
+
+
+def test_delete_inside_cte_is_rejected():
+    result = validate(
+        "WITH x AS (DELETE FROM employees RETURNING *) "
+        "SELECT * FROM x"
+    )
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_insert_inside_cte_is_rejected():
+    result = validate(
+        "WITH x AS (INSERT INTO employees VALUES (1) RETURNING *) "
+        "SELECT * FROM x"
+    )
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_select_into_is_rejected():
+    result = validate("SELECT * INTO new_table FROM employees")
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_for_update_is_rejected():
+    result = validate("SELECT * FROM employees FOR UPDATE")
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_for_share_is_rejected():
+    result = validate("SELECT * FROM employees FOR SHARE")
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_explain_is_rejected():
+    result = validate("EXPLAIN SELECT * FROM employees")
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_copy_is_rejected():
+    result = validate("COPY employees TO '/tmp/employees.csv'")
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_union_is_allowed():
+    result = validate("SELECT 1 UNION SELECT 2")
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
+def test_intersect_is_allowed():
+    result = validate("SELECT 1 INTERSECT SELECT 2")
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
+def test_except_is_allowed():
+    result = validate("SELECT 1 EXCEPT SELECT 2")
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
+def test_blocked_keyword_inside_string_is_allowed():
+    result = validate("SELECT 'DROP TABLE' AS message")
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
+def test_semicolon_inside_string_is_allowed():
+    result = validate("SELECT 'hello; world' AS message")
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
+def test_malformed_sql_is_rejected():
+    result = validate("SELECT FROM WHERE")
+    assert result["validation_status"] == ValidationStatus.INVALID

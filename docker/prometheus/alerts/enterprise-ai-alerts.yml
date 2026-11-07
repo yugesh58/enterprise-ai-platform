@@ -1,0 +1,45 @@
+groups:
+  - name: enterprise-ai-platform
+    rules:
+      - alert: BackendDown
+        expr: up{job="enterprise-ai-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Enterprise AI backend is unreachable"
+          description: "Prometheus has been unable to scrape the backend for more than 1 minute."
+
+      - alert: DependencyUnavailable
+        expr: dependency_health == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Dependency {{ $labels.dependency }} is unhealthy"
+          description: "A backend dependency has reported an unhealthy status for more than 1 minute."
+
+      - alert: HighHttp5xxRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total[5m])), 1e-9)
+          ) > 0.05
+          and
+          sum(increase(http_requests_total{status_code=~"5.."}[5m])) >= 3
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 5xx error rate is elevated"
+          description: "More than 5% of HTTP requests are failing with server errors."
+
+      - alert: AgentExecutionFailure
+        expr: sum by (agent) (increase(agent_executions_total{outcome="failure"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent {{ $labels.agent }} execution failures detected"
+          description: "One or more executions of this agent failed during the last 5 minutes."

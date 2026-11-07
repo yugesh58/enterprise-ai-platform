@@ -51,7 +51,15 @@ class VectorProvider(ABC):
     ) -> list[dict]:
         """Search similar vectors."""
         pass
-
+    @abstractmethod
+    def scroll(
+        self,
+        collection_name: str,
+        limit: int = 256,
+        offset: str | int | None = None,
+    ) -> tuple[list[dict[str, Any]], str | int | None]:
+        """Retrieve vector points in pages without loading embeddings."""
+        pass
     @abstractmethod
     def delete(
         self,

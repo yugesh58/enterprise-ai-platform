@@ -1,0 +1,100 @@
+rule_files:
+  - enterprise-ai-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: enterprise-ai-alerts-fire
+    interval: 1m
+
+    input_series:
+      - series: 'up{job="enterprise-ai-backend"}'
+        values: '0+0x10'
+
+      - series: 'dependency_health{dependency="redis"}'
+        values: '0+0x10'
+
+      - series: 'http_requests_total{status_code="500"}'
+        values: '0+1x10'
+
+      - series: 'http_requests_total{status_code="200"}'
+        values: '0+4x10'
+
+      - series: 'agent_executions_total{agent="sql",operation="execute",outcome="failure"}'
+        values: '0+1x10'
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: BackendDown
+        exp_alerts:
+          - exp_labels:
+              job: enterprise-ai-backend
+              severity: critical
+            exp_annotations:
+              summary: "Enterprise AI backend is unreachable"
+              description: "Prometheus has been unable to scrape the backend for more than 1 minute."
+
+      - eval_time: 10m
+        alertname: DependencyUnavailable
+        exp_alerts:
+          - exp_labels:
+              dependency: redis
+              severity: critical
+            exp_annotations:
+              summary: "Dependency redis is unhealthy"
+              description: "A backend dependency has reported an unhealthy status for more than 1 minute."
+
+      - eval_time: 10m
+        alertname: HighHttp5xxRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "HTTP 5xx error rate is elevated"
+              description: "More than 5% of HTTP requests are failing with server errors."
+
+      - eval_time: 10m
+        alertname: AgentExecutionFailure
+        exp_alerts:
+          - exp_labels:
+              agent: sql
+              severity: warning
+            exp_annotations:
+              summary: "Agent sql execution failures detected"
+              description: "One or more executions of this agent failed during the last 5 minutes."
+
+  - name: enterprise-ai-alerts-recover
+    interval: 1m
+
+    input_series:
+      - series: 'up{job="enterprise-ai-backend"}'
+        values: '0+0x2 1+0x8'
+
+      - series: 'dependency_health{dependency="redis"}'
+        values: '0+0x2 1+0x8'
+
+      - series: 'http_requests_total{status_code="500"}'
+        values: '0+1x2 2+0x8'
+
+      - series: 'http_requests_total{status_code="200"}'
+        values: '0+4x10'
+
+      - series: 'agent_executions_total{agent="sql",operation="execute",outcome="failure"}'
+        values: '0+1x2 2+0x8'
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: BackendDown
+        exp_alerts: []
+
+      - eval_time: 10m
+        alertname: DependencyUnavailable
+        exp_alerts: []
+
+      - eval_time: 10m
+        alertname: HighHttp5xxRate
+        exp_alerts: []
+
+      - eval_time: 10m
+        alertname: AgentExecutionFailure
+        exp_alerts: []

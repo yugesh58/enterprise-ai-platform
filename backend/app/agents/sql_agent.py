@@ -1,17 +1,19 @@
 
 import time
 
+from aiohttp import request
+
 from app.agents.base_agent import BaseAgent
 from app.schemas.agent_request import AgentRequest
 from app.schemas.agent_response import AgentResponse
 from app.core.enums import AgentType
 from app.workflows.sql.graph import sql_graph
-
+from app.agents.observability import observe_agent_execution
 
 class SQLAgent(BaseAgent):
     """Agent responsible for answering structured data queries."""
 
-    def execute(self, request: AgentRequest) -> AgentResponse:
+    def _execute(self, request: AgentRequest) -> AgentResponse:
         start_time = time.perf_counter()
 
         conversation_id = request.attributes.get(
@@ -68,3 +70,9 @@ class SQLAgent(BaseAgent):
                 },
             )
             raise
+    def execute(self, request: AgentRequest) -> AgentResponse:
+        return observe_agent_execution(
+        agent="sql",
+        operation="execute",
+        call=lambda: self._execute(request),
+    )

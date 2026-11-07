@@ -65,6 +65,32 @@ class DocumentChunkRepository:
         result = self._connection.execute(statement)
 
         return list(result.scalars().all())
+    def get_ids_page(
+        self,
+        limit: int = 500,
+        after_id: UUID | None = None,
+    ) -> list[UUID]:
+        """Retrieve a page of chunk IDs using UUID keyset pagination."""
+
+        if limit <= 0:
+            raise ValueError("limit must be greater than zero.")
+
+        statement = select(document_chunks.c.id)
+
+        if after_id is not None:
+            statement = statement.where(
+                document_chunks.c.id > after_id
+            )
+
+        statement = (
+            statement
+            .order_by(document_chunks.c.id)
+            .limit(limit)
+        )
+
+        result = self._connection.execute(statement)
+
+        return list(result.scalars().all())
 
     def delete_by_document_id(
         self,

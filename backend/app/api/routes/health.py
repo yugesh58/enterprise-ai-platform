@@ -1,7 +1,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
-
+from app.core.metrics import DEPENDENCY_HEALTH
 import redis
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -87,6 +87,11 @@ def readiness() -> JSONResponse:
             name: future.result()
             for name, future in futures.items()
         }
+
+        for name, status in dependencies.items():
+            DEPENDENCY_HEALTH.labels(dependency=name).set(
+        1 if status == "ok" else 0
+        )
 
     ready = all(
         status == "ok"

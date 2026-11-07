@@ -75,8 +75,8 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 1800
     DATABASE_ECHO: bool = False
-    SQL_MAX_RESULT_ROWS: int = 100
-    SQL_QUERY_TIMEOUT_MS: int = 10000
+    SQL_MAX_RESULT_ROWS: int = Field(default=100, ge=1)
+    SQL_QUERY_TIMEOUT_MS: int = Field(default=10000, ge=1)
 
     DOCUMENT_DATABASE_HOST: str = "localhost"
     DOCUMENT_DATABASE_PORT: int = 5433
@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "enterprise_ai"
+    QDRANT_UPSERT_MAX_RETRIES: int = Field(default=3, ge=0, le=10)
+    QDRANT_UPSERT_RETRY_BASE_DELAY_SECONDS: float = Field(
+    default=0.5,
+    gt=0,
+    )
 
     VECTOR_DB: str = "qdrant"
 

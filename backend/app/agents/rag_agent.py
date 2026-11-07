@@ -23,7 +23,10 @@ from app.services.document.document_retriever_service import DocumentRetriever
 from app.services.document.document_search_service import DocumentSearchService
 from app.services.document.query_expansion_service import QueryExpansionService
 from app.storage.database.connection import get_document_connection
-
+from app.agents.observability import (
+    observe_agent_execution,
+    observe_agent_stream,
+)
 
 class RAGAgent(BaseAgent):
     """Answer document questions using retrieval-augmented generation."""
@@ -60,7 +63,7 @@ class RAGAgent(BaseAgent):
             llm_provider=LLMFactory.get_provider(),
         )
 
-    def execute(self, request: AgentRequest) -> AgentResponse:
+    def _execute(self, request: AgentRequest) -> AgentResponse:
         start_time = time.perf_counter()
         source_count = 0
 
@@ -140,7 +143,14 @@ class RAGAgent(BaseAgent):
         finally:
             connection.close()
 
-    def stream(self, request: AgentRequest) -> Iterator[str]:
+    def execute(self, request: AgentRequest) -> AgentResponse:
+        return observe_agent_execution(
+        agent="rag",
+        operation="execute",
+        call=lambda: self._execute(request),
+    )
+
+    def _stream(self, request: AgentRequest) -> Iterator[str]:
         """Stream a RAG answer while keeping the session alive as needed."""
 
         start_time = time.perf_counter()
@@ -180,3 +190,9 @@ class RAGAgent(BaseAgent):
                 },
             )
             connection.close()
+
+    def stream(self, request: AgentRequest) -> Iterator[str]:
+        return observe_agent_stream(
+        agent="rag",
+        chunks=self._stream(request),
+    )

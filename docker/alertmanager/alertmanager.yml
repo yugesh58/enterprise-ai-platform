@@ -1,0 +1,32 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp-relay.brevo.com:587'
+  smtp_from: 'yugeshbhadwal58@gmail.com'
+  smtp_auth_username: 'c1ed64001@smtp-brevo.com'
+  smtp_auth_password_file: '/run/secrets/brevo_smtp_key'
+  smtp_require_tls: true
+
+route:
+  receiver: 'email-alerts'
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: 'email-alerts'
+    email_configs:
+      - to: 'yugeshbhadwal58@gmail.com'
+        send_resolved: true
+        headers:
+          Subject: '[Enterprise AI Platform] {{ .Status | toUpper }}: {{ .CommonLabels.alertname }}'
+        html: |
+          <h2>Enterprise AI Platform Alert</h2>
+          <p><strong>Status:</strong> {{ .Status }}</p>
+          {{ range .Alerts }}
+          <hr>
+          <p><strong>Alert:</strong> {{ .Labels.alertname }}</p>
+          <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+          <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          {{ end }}

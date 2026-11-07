@@ -13,6 +13,15 @@ from qdrant_client.models import (
 from app.core.config import settings
 from app.storage.vectorstore.base import VectorProvider
 from app.storage.vectorstore.models.vector_point import VectorPoint
+import logging
+import time
+
+import httpx
+from qdrant_client.http.exceptions import (
+    ResponseHandlingException,
+    UnexpectedResponse,
+)
+logger = logging.getLogger(__name__)
 
 
 class QdrantProvider(VectorProvider):
@@ -171,7 +180,24 @@ class QdrantProvider(VectorProvider):
                 f"{actual_size} dimensions, but the application "
                 f"is configured for {expected_vector_size}."
             )
+    @staticmethod
+    def _is_retryable_upsert_error(error: Exception) -> bool:
+        """Identify transient Qdrant and HTTP transport failures."""
 
+        if isinstance(error, UnexpectedResponse):
+            status_code = error.status_code
+            return status_code == 429 or (
+                status_code is not None and 500 <= status_code < 600
+            )
+
+        if isinstance(error, ResponseHandlingException):
+            source = error.source
+            if isinstance(source, Exception):
+                return QdrantProvider._is_retryable_upsert_error(
+                    source
+                )
+
+        return isinstance(error, httpx.TransportError)
     # ==========================================================
     # Upsert
     # ==========================================================
@@ -202,17 +228,42 @@ class QdrantProvider(VectorProvider):
                     "must have the same dimension."
                 )
 
-        self._client.upsert(
-            collection_name=collection_name,
-            points=[
-                PointStruct(
-                    id=point.id,
-                    vector=point.vector,
-                    payload=point.payload,
+        max_retries = settings.QDRANT_UPSERT_MAX_RETRIES
+        base_delay = settings.QDRANT_UPSERT_RETRY_BASE_DELAY_SECONDS
+
+        for attempt in range(max_retries + 1):
+            try:
+                self._client.upsert(
+                    collection_name=collection_name,
+                    points=[
+                        PointStruct(
+                            id=point.id,
+                            vector=point.vector,
+                            payload=point.payload,
+                        )
+                        for point in points
+                    ],
                 )
-                for point in points
-            ],
-        )
+                return
+
+            except Exception as exc:
+                if (
+                    not self._is_retryable_upsert_error(exc)
+                    or attempt >= max_retries
+                ):
+                    raise
+
+                delay = base_delay * (2 ** attempt)
+
+                logger.warning(
+                    "Transient Qdrant upsert failure. "
+                    "Retrying attempt %s/%s in %.2f seconds.",
+                    attempt + 1,
+                    max_retries,
+                    delay,
+                )
+
+                time.sleep(delay)
 
     # ==========================================================
     # Search
@@ -274,7 +325,46 @@ class QdrantProvider(VectorProvider):
             }
             for point in results.points
         ]
+        # ==========================================================
+    # Scroll Vectors
+    # ==========================================================
 
+    def scroll(
+        self,
+        collection_name: str,
+        limit: int = 256,
+        offset: str | int | None = None,
+    ) -> tuple[list[dict[str, Any]], str | int | None]:
+        """
+        Retrieve a page of vector points without loading embeddings.
+
+        Returns:
+            A tuple containing:
+            - Point records with ID and payload.
+            - Offset for retrieving the next page.
+        """
+        self._ensure_connected()
+
+        if limit <= 0:
+            raise ValueError("Scroll limit must be greater than zero.")
+
+        records, next_offset = self._client.scroll(
+            collection_name=collection_name,
+            limit=limit,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        points = [
+            {
+                "id": str(record.id),
+                "payload": record.payload or {},
+            }
+            for record in records
+        ]
+
+        return points, next_offset
     # ==========================================================
     # Delete Vectors
     # ==========================================================

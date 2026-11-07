@@ -141,14 +141,85 @@ services:
     networks:
       - enterprise-ai-network
 
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    container_name: enterprise-ai-prometheus
+    restart: unless-stopped
+
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+
+    ports:
+      - "127.0.0.1:9090:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+
+    secrets:
+      - prometheus_api_key
+
+    networks:
+      - enterprise-ai-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: enterprise-ai-alertmanager
+    restart: unless-stopped
+
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+
+    ports:
+      - "127.0.0.1:9093:9093"
+
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+
+    secrets:
+      - brevo_smtp_key
+
+    networks:
+      - enterprise-ai-network
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    container_name: enterprise-ai-grafana
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - enterprise-ai-network
 
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
   pgadmin_data:
-
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
 
 networks:
   enterprise-ai-network:
     driver: bridge
+
+  
+
+secrets:
+  prometheus_api_key:
+    file: ./prometheus/secrets/api_key
+
+  brevo_smtp_key:
+    file: ./alertmanager/secrets/smtp_key

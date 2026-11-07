@@ -45,24 +45,29 @@ class PostgreSQLProvider(DatabaseProvider):
             return dict(row) if row else None
 
     def fetch_all(
-        self,
-        query: str,
-        params: dict[str, Any] | None = None,
+    self,
+    query: str,
+    params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         self.connect()
         assert self._engine is not None
 
         with self._engine.begin() as connection:
+        # Enforce read-only execution at the database transaction level.
+            connection.execute(text("SET TRANSACTION READ ONLY"))
+
+        # Apply the query timeout to this transaction.
             connection.execute(
-                text(
-                    f"SET LOCAL statement_timeout = "
-                    f"{settings.SQL_QUERY_TIMEOUT_MS}"
-                )
+            text(
+                f"SET LOCAL statement_timeout = "
+                f"{settings.SQL_QUERY_TIMEOUT_MS}"
             )
+            )
+
             result = connection.execute(text(query), params or {})
+            rows = [dict(row) for row in result.mappings().all()]
 
-        return [dict(row) for row in result.mappings().all()]
-
+        return rows
     def get_schema(self) -> dict[str, Any]:
         """Return complete database schema metadata."""
         self.connect()

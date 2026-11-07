@@ -96,3 +96,5 @@ zstandard==0.25.0
 prometheus-client==0.26.0
 PyMuPDF==1.28.2
 python-multipart==0.0.32
+
+sqlglot==30.29.0

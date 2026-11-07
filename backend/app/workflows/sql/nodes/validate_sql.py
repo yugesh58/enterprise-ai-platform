@@ -1,42 +1,26 @@
 import time
 
+from sqlglot import exp, parse
+from sqlglot.errors import ParseError
+
 from app.core.enums import ValidationStatus
-
-
-BLOCKED_KEYWORDS = {
-    "INSERT",
-    "UPDATE",
-    "DELETE",
-    "DROP",
-    "ALTER",
-    "TRUNCATE",
-    "CREATE",
-    "REPLACE",
-    "MERGE",
-    "UPSERT",
-    "GRANT",
-    "REVOKE",
-    "ATTACH",
-    "DETACH",
-    "VACUUM",
-    "PRAGMA",
-}
 
 
 def validate_sql_node(state):
     """
-    Validate LLM-generated SQL before execution.
+    Validate LLM-generated SQL using PostgreSQL AST parsing.
 
     Policy:
     - Exactly one SQL statement.
-    - Only SELECT/WITH read queries are allowed.
-    - No write, DDL, or database administration operations.
+    - Only read-only query expressions are allowed.
+    - No DML, DDL, or administrative operations.
+    - SELECT INTO and locking clauses are prohibited.
     - SQL comments are not allowed.
     """
 
     start_time = time.perf_counter()
 
-    sql_query = state.get("sql_query", "").strip()
+    sql_query = state.get("sql_query", "")
 
     def result(status, reason):
         elapsed_ms = (time.perf_counter() - start_time) * 1000
@@ -47,65 +31,78 @@ def validate_sql_node(state):
             "sql_validation_ms": elapsed_ms,
         }
 
-    if not sql_query:
+    if not isinstance(sql_query, str) or not sql_query.strip():
         return result(
             ValidationStatus.INVALID,
-            "SQL query is empty.",
+            "SQL query is empty or invalid.",
         )
 
-    normalized_sql = sql_query.rstrip(";").strip()
+    try:
+        statements = parse(sql_query.strip(), read="postgres")
+    except ParseError:
+        return result(
+            ValidationStatus.INVALID,
+            "SQL query contains invalid PostgreSQL syntax.",
+        )
 
-    if (
-        "--" in normalized_sql
-        or "/*" in normalized_sql
-        or "*/" in normalized_sql
+    statements = [statement for statement in statements if statement is not None]
+
+    if len(statements) != 1:
+        return result(
+            ValidationStatus.INVALID,
+            "Multiple SQL statements are not allowed.",
+        )
+
+    statement = statements[0]
+
+    # Only query expressions such as SELECT, UNION, INTERSECT and EXCEPT.
+    if not isinstance(statement, exp.Query):
+        return result(
+            ValidationStatus.INVALID,
+            "Only SELECT queries are allowed.",
+        )
+
+    nodes = list(statement.walk())
+
+    # Reject DML and DDL anywhere in the AST, including inside CTEs.
+    if any(isinstance(node, (exp.DML, exp.DDL)) for node in nodes):
+        return result(
+            ValidationStatus.INVALID,
+            "Write and database administration operations are not allowed.",
+        )
+
+    # SELECT INTO creates a table despite having a SELECT root.
+    if any(
+        isinstance(node, exp.Select) and node.args.get("into") is not None
+        for node in nodes
     ):
+        return result(
+            ValidationStatus.INVALID,
+            "SELECT INTO statements are not allowed.",
+        )
+
+    # Locking clauses can acquire database locks and are prohibited.
+    if any(
+        isinstance(node, exp.Select) and node.args.get("locks")
+        for node in nodes
+    ):
+        return result(
+            ValidationStatus.INVALID,
+            "SELECT locking clauses are not allowed.",
+        )
+
+    # Preserve the existing policy that rejects SQL comments.
+    if any(node.comments for node in nodes):
         return result(
             ValidationStatus.INVALID,
             "SQL comments are not allowed.",
         )
 
-    if ";" in normalized_sql:
-        return result(
-            ValidationStatus.INVALID,
-            "Multiple SQL statements detected.",
-        )
-
-    sql_upper = normalized_sql.upper()
-
-    if not (
-        sql_upper.startswith("SELECT")
-        or sql_upper.startswith("WITH")
-    ):
-        return result(
-            ValidationStatus.INVALID,
-            "Only SELECT statements are allowed.",
-        )
-
-    tokens = (
-        sql_upper
-        .replace("(", " ")
-        .replace(")", " ")
-        .split()
-    )
-
-    for keyword in BLOCKED_KEYWORDS:
-        if keyword in tokens:
-            return result(
-                ValidationStatus.INVALID,
-                f"{keyword} statements are not allowed.",
-            )
-
-    return result(
-        ValidationStatus.VALID,
-        "",
-    )
+    return result(ValidationStatus.VALID, "")
 
 
 def validation_router(state):
-    """
-    Route the workflow based on SQL validation.
-    """
+    """Route the workflow based on SQL validation."""
 
     if state["validation_status"] == ValidationStatus.VALID:
         return "execute_sql"
