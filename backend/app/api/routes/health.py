@@ -1,17 +1,18 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
-from app.core.metrics import DEPENDENCY_HEALTH
-import redis
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.core.metrics import DEPENDENCY_HEALTH
 from app.core.config import settings
 from app.storage.database.connection import (
     document_engine,
     sql_engine,
 )
+from app.storage.redis_client import get_redis_client
 from app.storage.vectorstore.factory import VectorStoreFactory
 
 router = APIRouter(tags=["Health"])
@@ -28,26 +29,16 @@ def _check_document_database() -> None:
 
 
 def _check_redis() -> None:
-    client = redis.Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=settings.REDIS_DB,
-        socket_connect_timeout=2,
-        socket_timeout=2,
-        decode_responses=True,
-    )
-    try:
-        if client.ping() is not True:
-            raise RuntimeError("Redis ping failed")
-    finally:
-        client.close()
+    """Verify Redis connectivity using the configured client."""
+    client = get_redis_client()
 
+    if client.ping() is not True:
+        raise RuntimeError("Redis ping failed")
 
 
 def _check_qdrant() -> None:
     provider = VectorStoreFactory.get_provider()
     provider.health_check()
-
 
 
 def _run_check(check: Callable[[], None]) -> str:
@@ -88,9 +79,9 @@ def readiness() -> JSONResponse:
             for name, future in futures.items()
         }
 
-        for name, status in dependencies.items():
-            DEPENDENCY_HEALTH.labels(dependency=name).set(
-        1 if status == "ok" else 0
+    for name, status in dependencies.items():
+        DEPENDENCY_HEALTH.labels(dependency=name).set(
+            1 if status == "ok" else 0
         )
 
     ready = all(

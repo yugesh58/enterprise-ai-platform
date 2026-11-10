@@ -2,7 +2,7 @@
 from fastapi import Depends
 
 from app.ai.llm_factory import LLMFactory
-
+from typing import Callable
 from app.api.dependencies.repositories import (
     get_document_chunk_repository,
     get_document_repository,
@@ -135,6 +135,27 @@ def get_document_indexing_service(
         chunking_service=ChunkingService(),
         vector_provider=get_vector_provider(),
     )
+
+def get_document_indexing_service_factory(
+    repository: DocumentRepository = Depends(
+        get_document_repository
+    ),
+    chunk_repository: DocumentChunkRepository = Depends(
+        get_document_chunk_repository
+    ),
+    storage=Depends(get_storage_provider),
+) -> Callable[[], DocumentIndexingService]:
+    def create_service() -> DocumentIndexingService:
+        return DocumentIndexingService(
+            repository=repository,
+            chunk_repository=chunk_repository,
+            storage=storage,
+            pdf_processing_service=PDFProcessingService(),
+            chunking_service=ChunkingService(),
+            vector_provider=get_vector_provider(),
+        )
+
+    return create_service
 
 
 def get_document_rag_service(

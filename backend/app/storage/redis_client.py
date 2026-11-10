@@ -15,4 +15,5 @@ def get_redis_client() -> redis.Redis:
         socket_connect_timeout=2,
         socket_timeout=2,
         decode_responses=True,
+        password=settings.REDIS_PASSWORD,
     )

@@ -1,18 +1,20 @@
 
 from unittest.mock import Mock
 from uuid import uuid4
-from app.api.dependencies.rate_limit import enforce_rate_limit
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.api.dependencies.document import (
-    get_document_service,
-    get_document_indexing_service,
-    get_document_search_service,
     get_document_chat_service,
+    get_document_indexing_service_factory,
+    get_document_search_service,
+    get_document_service,
 )
+from app.api.dependencies.rate_limit import enforce_rate_limit
 from app.core.config import settings
+from app.main import app
+
 
 @pytest.fixture
 def client():
@@ -27,6 +29,7 @@ def client():
         yield test_client
 
     app.dependency_overrides.clear()
+
 
 @pytest.fixture
 def document_service():
@@ -65,8 +68,8 @@ def test_upload_new_document_returns_202_and_schedules_indexing(
     app.dependency_overrides[get_document_service] = (
         lambda: document_service
     )
-    app.dependency_overrides[get_document_indexing_service] = (
-        lambda: indexing_service
+    app.dependency_overrides[get_document_indexing_service_factory] = (
+        lambda: lambda: indexing_service
     )
 
     response = client.post(
@@ -117,8 +120,8 @@ def test_upload_existing_indexed_document_does_not_reindex(
     app.dependency_overrides[get_document_service] = (
         lambda: document_service
     )
-    app.dependency_overrides[get_document_indexing_service] = (
-        lambda: indexing_service
+    app.dependency_overrides[get_document_indexing_service_factory] = (
+        lambda: lambda: indexing_service
     )
 
     response = client.post(
@@ -139,7 +142,6 @@ def test_upload_existing_indexed_document_does_not_reindex(
     indexing_service.index_document.assert_not_called()
 
 
-
 def test_upload_value_error_returns_400(
     client,
     document_service,
@@ -152,8 +154,8 @@ def test_upload_value_error_returns_400(
     app.dependency_overrides[get_document_service] = (
         lambda: document_service
     )
-    app.dependency_overrides[get_document_indexing_service] = (
-        lambda: indexing_service
+    app.dependency_overrides[get_document_indexing_service_factory] = (
+        lambda: lambda: indexing_service
     )
 
     response = client.post(
@@ -275,7 +277,8 @@ def test_document_chat_rejects_missing_question(
 
     assert response.status_code == 422
     chat_service.chat.assert_not_called()
-    id="80426"
+
+
 def test_upload_rejects_unsupported_extension(client):
     response = client.post(
         "/documents/upload",
@@ -290,6 +293,8 @@ def test_upload_rejects_unsupported_extension(client):
 
     assert response.status_code == 415
     assert "Unsupported file type" in response.json()["error"]["message"]
+
+
 def test_upload_rejects_mime_type_mismatch(client):
     response = client.post(
         "/documents/upload",
@@ -304,6 +309,8 @@ def test_upload_rejects_mime_type_mismatch(client):
 
     assert response.status_code == 415
     assert "content type do not match" in response.json()["error"]["message"]
+
+
 def test_upload_rejects_invalid_pdf_content(client):
     response = client.post(
         "/documents/upload",
@@ -334,6 +341,8 @@ def test_upload_rejects_invalid_utf8_text(client):
 
     assert response.status_code == 415
     assert "UTF-8 is required" in response.json()["error"]["message"]
+
+
 def test_upload_rejects_file_exceeding_size_limit(
     client,
     monkeypatch,

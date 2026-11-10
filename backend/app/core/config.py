@@ -103,6 +103,7 @@ class Settings(BaseSettings):
 
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
+    QDRANT_API_KEY: str = ""
     QDRANT_COLLECTION: str = "enterprise_ai"
     QDRANT_UPSERT_MAX_RETRIES: int = Field(default=3, ge=0, le=10)
     QDRANT_UPSERT_RETRY_BASE_DELAY_SECONDS: float = Field(
@@ -125,6 +126,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ""
     DOCUMENT_INDEX_LOCK_TTL_SECONDS: int = 3600
     DOCUMENT_INDEX_LOCK_RENEWAL_INTERVAL_SECONDS: int = 1200
     # ==========================================================
@@ -190,6 +192,16 @@ class Settings(BaseSettings):
             raise ValueError(
             "API authentication must be enabled in production."
         )
+
+        if len(self.QDRANT_API_KEY) < 32:
+            raise ValueError(
+                "Production QDRANT_API_KEY must contain at least 32 characters."
+            )
+
+        if len(self.REDIS_PASSWORD) < 32:
+            raise ValueError(
+                "Production REDIS_PASSWORD must contain at least 32 characters."
+            )
 
         if len(self.API_KEY) < 32:
             raise ValueError(

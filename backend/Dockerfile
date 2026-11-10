@@ -19,7 +19,12 @@ RUN python -m pip install --upgrade pip \
 
 COPY . .
 
-RUN mkdir -p uploads
+# Create a dedicated non-root application user
+RUN mkdir -p /app/uploads \
+    && useradd --system --uid 10001 --create-home appuser \
+    && chown -R appuser:appuser /app
+
+USER 10001:10001
 
 EXPOSE 8000
 

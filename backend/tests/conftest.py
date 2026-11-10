@@ -11,3 +11,4 @@ def configure_test_api_auth(monkeypatch):
         "API_KEY",
         "test-api-key-for-tests",
     )
+    monkeypatch.setattr(settings, "RATE_LIMIT_REQUESTS", 10000)

@@ -1,4 +1,6 @@
+
 from pathlib import Path
+from typing import Callable
 
 from fastapi import (
     APIRouter,
@@ -11,7 +13,7 @@ from fastapi import (
 
 from app.api.dependencies.document import (
     get_document_chat_service,
-    get_document_indexing_service,
+    get_document_indexing_service_factory,
     get_document_search_service,
     get_document_service,
 )
@@ -47,8 +49,8 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     document_service: DocumentService = Depends(get_document_service),
-    indexing_service: DocumentIndexingService = Depends(
-        get_document_indexing_service
+    indexing_service_factory: Callable[[], DocumentIndexingService] = Depends(
+        get_document_indexing_service_factory
     ),
 ):
     allowed_types = {
@@ -113,6 +115,7 @@ async def upload_document(
         status = result["status"]
 
         if result["should_index"]:
+            indexing_service = indexing_service_factory()
             background_tasks.add_task(
                 indexing_service.index_document,
                 document_id,
@@ -151,6 +154,8 @@ async def upload_document(
             status_code=500,
             detail="Document upload failed. Please try again.",
         )
+
+
 @router.post("/search")
 def search_documents(
     request: SearchRequest,
@@ -169,6 +174,7 @@ def search_documents(
         "results": results,
     }
 
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(
     request: ChatRequest,
@@ -176,7 +182,6 @@ def chat(
         get_document_chat_service,
     ),
 ):
-
     return chat_service.chat(
         question=request.question,
         top_k=request.top_k,

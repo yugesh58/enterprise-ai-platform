@@ -55,21 +55,28 @@ class QdrantProvider(VectorProvider):
         Establish the Qdrant connection and validate the
         configured collection.
         """
-
         if self._client is not None:
             return
 
-        self._client = QdrantClient(
+        client = QdrantClient(
             host=settings.QDRANT_HOST,
             port=settings.QDRANT_PORT,
+            https=False,
+            api_key=settings.QDRANT_API_KEY or None,
         )
 
-        self._client.get_collections()
+        try:
+            client.get_collections()
+            self._client = client
 
-        self._ensure_collection_exists(
-            collection_name=settings.QDRANT_COLLECTION,
-            vector_size=settings.QDRANT_VECTOR_SIZE,
-        )
+            self._ensure_collection_exists(
+                collection_name=settings.QDRANT_COLLECTION,
+                vector_size=settings.QDRANT_VECTOR_SIZE,
+            )
+        except Exception:
+            client.close()
+            self._client = None
+            raise
 
     # ==========================================================
     # Collection Management

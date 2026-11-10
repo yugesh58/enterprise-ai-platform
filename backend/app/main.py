@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from app.core.config import settings
 from app.api.chat import router as chat_router
 from app.api.exception_handlers import register_exception_handlers
 from app.api.middleware import RequestContextMiddleware
@@ -24,7 +24,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         dispose_database_engines()
         dispose_sqlite_engine()
 
-app = FastAPI(lifespan=lifespan)
+is_production = settings.ENVIRONMENT.lower() == "production"
+
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
+)
 
 app.include_router(health_router)
 app.include_router(chat_router)
