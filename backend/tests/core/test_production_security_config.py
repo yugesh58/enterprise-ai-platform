@@ -11,6 +11,8 @@ VALID_PRODUCTION_CONFIG = {
     "API_KEY": "a" * 40,
     "RATE_LIMIT_ENABLED": True,
     "RATE_LIMIT_KEY_SECRET": "b" * 40,
+    "QDRANT_API_KEY": "c" * 40,
+    "REDIS_PASSWORD": "d" * 40,
 }
 
 

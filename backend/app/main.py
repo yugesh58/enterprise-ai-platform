@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-
+from app.ai.embedding_factory import EmbeddingFactory
 from fastapi import FastAPI
 from app.core.config import settings
 from app.api.chat import router as chat_router
@@ -16,11 +16,12 @@ from app.storage.database.providers.sqlite_provider import (
 )
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Manage shared database engine lifecycle."""
+    """Manage shared application resource lifecycle."""
 
     try:
         yield
     finally:
+        EmbeddingFactory.reset()
         dispose_database_engines()
         dispose_sqlite_engine()
 
