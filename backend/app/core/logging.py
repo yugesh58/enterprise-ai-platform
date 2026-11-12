@@ -1,3 +1,4 @@
+
 import json
 import logging
 from datetime import datetime, timezone
@@ -30,12 +31,17 @@ class JsonFormatter(logging.Formatter):
             "request_id": getattr(record, "request_id", "-"),
         }
 
-        # Include only explicitly supported structured fields.
         structured_fields = (
             "method",
             "path",
             "status_code",
             "duration_ms",
+            "total_latency_ms",
+            "schema_retrieval_ms",
+            "sql_generation_ms",
+            "sql_validation_ms",
+            "sql_execution_ms",
+            "summarization_ms",
             "operation",
             "provider",
             "model",
@@ -52,7 +58,6 @@ class JsonFormatter(logging.Formatter):
             if value is not None:
                 payload[key] = value
 
-        # Include exception details when available.
         if record.exc_info:
             payload["exception"] = self.formatException(
                 record.exc_info
@@ -70,7 +75,6 @@ def get_logger(name: str) -> logging.Logger:
 
     logger = logging.getLogger(name)
 
-    # Avoid attaching duplicate handlers.
     if logger.handlers:
         return logger
 

@@ -1,14 +1,13 @@
 
 import time
 
-from aiohttp import request
-
 from app.agents.base_agent import BaseAgent
+from app.agents.observability import observe_agent_execution
+from app.core.enums import AgentType
 from app.schemas.agent_request import AgentRequest
 from app.schemas.agent_response import AgentResponse
-from app.core.enums import AgentType
 from app.workflows.sql.graph import sql_graph
-from app.agents.observability import observe_agent_execution
+
 
 class SQLAgent(BaseAgent):
     """Agent responsible for answering structured data queries."""
@@ -42,6 +41,29 @@ class SQLAgent(BaseAgent):
             request.context.selected_agent = AgentType.SQL
 
             self.logger.info(
+                "SQL Agent stage performance",
+                extra={
+                    "agent": str(AgentType.SQL),
+                    "schema_retrieval_ms": graph_response.get(
+                        "schema_retrieval_ms", 0.0
+                    ),
+                    "sql_generation_ms": graph_response.get(
+                        "sql_generation_ms", 0.0
+                    ),
+                    "sql_validation_ms": graph_response.get(
+                        "sql_validation_ms", 0.0
+                    ),
+                    "sql_execution_ms": graph_response.get(
+                        "sql_execution_ms", 0.0
+                    ),
+                    "summarization_ms": graph_response.get(
+                        "summarization_ms", 0.0
+                    ),
+                    "total_latency_ms": total_latency_ms,
+                },
+            )
+
+            self.logger.info(
                 "SQL Agent execution completed",
                 extra={
                     "agent": str(AgentType.SQL),
@@ -70,9 +92,10 @@ class SQLAgent(BaseAgent):
                 },
             )
             raise
+
     def execute(self, request: AgentRequest) -> AgentResponse:
         return observe_agent_execution(
-        agent="sql",
-        operation="execute",
-        call=lambda: self._execute(request),
-    )
+            agent="sql",
+            operation="execute",
+            call=lambda: self._execute(request),
+        )
