@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field,model_validator
 
@@ -10,7 +11,10 @@ class Settings(BaseSettings):
     Loads configuration from environment variables and the .env file.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).resolve().parents[2] / ".env",
+        extra="ignore",
+    )
 
     # ==========================================================
     # Application
@@ -41,7 +45,7 @@ class Settings(BaseSettings):
     TEMPERATURE: float = 0.0
     MAX_TOKENS: int = 4000
 
-    
+
     # ==========================================================
     # LLM Cost Observability
     # Prices are in USD per one million tokens.
@@ -70,6 +74,9 @@ class Settings(BaseSettings):
     DATABASE_USER: str = "enterprise_user"
     DATABASE_PASSWORD: str = "enterprise_password"
 
+    SQL_AGENT_DATABASE_USER: str = ""
+    SQL_AGENT_DATABASE_PASSWORD: str = ""
+
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
     DATABASE_POOL_TIMEOUT: int = 30
@@ -79,10 +86,34 @@ class Settings(BaseSettings):
     SQL_QUERY_TIMEOUT_MS: int = Field(default=10000, ge=1)
 
     DOCUMENT_DATABASE_HOST: str = "localhost"
-    DOCUMENT_DATABASE_PORT: int = 5433
+    DOCUMENT_DATABASE_PORT: int = 5432
     DOCUMENT_DATABASE_NAME: str = "enterprise_ai"
     DOCUMENT_DATABASE_USER: str = "enterprise_user"
     DOCUMENT_DATABASE_PASSWORD: str = "enterprise_password"
+
+
+    # ==========================================================
+    # Application Runtime Database
+    # ==========================================================
+
+    APP_DATABASE_HOST: str = "localhost"
+    APP_DATABASE_PORT: int = 5432
+    APP_DATABASE_NAME: str = "enterprise_ai"
+    APP_DATABASE_USER: str = ""
+    APP_DATABASE_PASSWORD: str = ""
+
+    @property
+    def APP_DATABASE_URL(self) -> str:
+        from sqlalchemy.engine import URL
+
+        return URL.create(
+            drivername="postgresql+psycopg",
+            username=self.APP_DATABASE_USER,
+            password=self.APP_DATABASE_PASSWORD,
+            host=self.APP_DATABASE_HOST,
+            port=self.APP_DATABASE_PORT,
+            database=self.APP_DATABASE_NAME,
+        ).render_as_string(hide_password=False)
 
     @property
     def DOCUMENT_DATABASE_URL(self) -> str:
@@ -95,6 +126,45 @@ class Settings(BaseSettings):
             host=self.DOCUMENT_DATABASE_HOST,
             port=self.DOCUMENT_DATABASE_PORT,
             database=self.DOCUMENT_DATABASE_NAME,
+        ).render_as_string(hide_password=False)
+
+    @property
+    def SQL_AGENT_DATABASE_URL(self) -> str:
+        from sqlalchemy.engine import URL
+
+        has_user = bool(self.SQL_AGENT_DATABASE_USER)
+        has_password = bool(self.SQL_AGENT_DATABASE_PASSWORD)
+
+        if has_user != has_password:
+            raise ValueError(
+                "SQL_AGENT_DATABASE_USER and "
+                "SQL_AGENT_DATABASE_PASSWORD must be set together."
+            )
+
+        if not has_user and self.ENVIRONMENT.lower() != "development":
+            raise ValueError(
+                "SQL Agent database credentials must be explicitly "
+                "configured outside development."
+            )
+
+        username = (
+            self.SQL_AGENT_DATABASE_USER
+            if has_user
+            else self.DATABASE_USER
+        )
+        password = (
+            self.SQL_AGENT_DATABASE_PASSWORD
+            if has_password
+            else self.DATABASE_PASSWORD
+        )
+
+        return URL.create(
+            drivername="postgresql+psycopg",
+            username=username,
+            password=password,
+            host=self.DATABASE_HOST,
+            port=self.DATABASE_PORT,
+            database=self.DATABASE_NAME,
         ).render_as_string(hide_password=False)
 
     # ==========================================================
@@ -129,6 +199,19 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = ""
     DOCUMENT_INDEX_LOCK_TTL_SECONDS: int = 3600
     DOCUMENT_INDEX_LOCK_RENEWAL_INTERVAL_SECONDS: int = 1200
+    DOCUMENT_INDEXING_STALE_TIMEOUT_SECONDS: int = Field(
+        default=3600, ge=1
+    )
+
+    # ==========================================================
+    # Conversation Memory
+    # ==========================================================
+
+    MEMORY_PROVIDER: str = "local"
+    MEMORY_MAX_MESSAGES: int = 10
+    MEMORY_TTL_SECONDS: int = 86400
+    MEMORY_MAX_CONVERSATIONS: int = 1000
+
     # ==========================================================
     # Rate Limiting
     # ==========================================================
@@ -168,7 +251,7 @@ class Settings(BaseSettings):
     # Vector Store
     # ==========================================================
 
-    
+
 
     @property
     def DATABASE_URL(self) -> str:
@@ -178,20 +261,82 @@ class Settings(BaseSettings):
         f"@{self.DATABASE_HOST}:{self.DATABASE_PORT}"
         f"/{self.DATABASE_NAME}"
     )
+
     @model_validator(mode="after")
     def validate_production_security(self):
+        # Validate memory configuration in every environment.
+        if self.MEMORY_PROVIDER.lower() not in {"local", "redis"}:
+            raise ValueError(
+                "MEMORY_PROVIDER must be either 'local' or 'redis'."
+            )
+
+        if self.MEMORY_MAX_CONVERSATIONS < 1:
+            raise ValueError("MEMORY_MAX_CONVERSATIONS must be positive.")
+
+        if self.MEMORY_MAX_MESSAGES < 1:
+            raise ValueError(
+                "MEMORY_MAX_MESSAGES must be positive."
+            )
+
+        if self.MEMORY_TTL_SECONDS < 1:
+            raise ValueError(
+                "MEMORY_TTL_SECONDS must be positive."
+            )
+
         if self.ENVIRONMENT.lower() != "production":
             return self
+        if not self.APP_DATABASE_USER:
+            raise ValueError("Production requires APP_DATABASE_USER.")
+
+        if len(self.APP_DATABASE_PASSWORD) < 32:
+            raise ValueError(
+                "Production APP_DATABASE_PASSWORD must contain "
+                "at least 32 characters."
+            )
+
+        if not self.SQL_AGENT_DATABASE_USER:
+            raise ValueError(
+                "Production requires SQL_AGENT_DATABASE_USER."
+            )
+
+        if len(self.SQL_AGENT_DATABASE_PASSWORD) < 32:
+            raise ValueError(
+                "Production SQL_AGENT_DATABASE_PASSWORD must contain "
+                "at least 32 characters."
+            )
+
+        if self.APP_DATABASE_USER in {
+            self.DATABASE_USER,
+            self.DOCUMENT_DATABASE_USER,
+        }:
+            raise ValueError(
+                "Application runtime must use a dedicated database user."
+            )
+
+        if self.SQL_AGENT_DATABASE_USER in {
+            self.APP_DATABASE_USER,
+            self.DOCUMENT_DATABASE_USER,
+        }:
+            raise ValueError(
+                "SQL Agent must use a dedicated database user."
+            )
+
+
+        # Production must use persistent Redis memory.
+        if self.MEMORY_PROVIDER.lower() != "redis":
+            raise ValueError(
+                "Production requires MEMORY_PROVIDER=redis."
+            )
 
         if self.DEBUG:
             raise ValueError(
-            "DEBUG must be disabled in production."
-        )
+                "DEBUG must be disabled in production."
+            )
 
         if not self.API_AUTH_ENABLED:
             raise ValueError(
-            "API authentication must be enabled in production."
-        )
+                "API authentication must be enabled in production."
+            )
 
         if len(self.QDRANT_API_KEY) < 32:
             raise ValueError(
@@ -205,26 +350,27 @@ class Settings(BaseSettings):
 
         if len(self.API_KEY) < 32:
             raise ValueError(
-            "Production API_KEY must contain at least 32 characters."
-        )
+                "Production API_KEY must contain at least 32 characters."
+            )
 
         if not self.RATE_LIMIT_ENABLED:
             raise ValueError(
-            "Rate limiting must be enabled in production."
-        )
+                "Rate limiting must be enabled in production."
+            )
 
         if len(self.RATE_LIMIT_KEY_SECRET) < 32:
             raise ValueError(
-            "Production RATE_LIMIT_KEY_SECRET must contain "
-            "at least 32 characters."
-        )
+                "Production RATE_LIMIT_KEY_SECRET must contain "
+                "at least 32 characters."
+            )
 
         if self.API_KEY == self.RATE_LIMIT_KEY_SECRET:
             raise ValueError(
-            "API_KEY and RATE_LIMIT_KEY_SECRET must be different."
+                "API_KEY and RATE_LIMIT_KEY_SECRET must be different."
             )
 
         return self
+
 
 @lru_cache
 def get_settings() -> Settings:

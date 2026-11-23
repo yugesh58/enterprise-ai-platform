@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.models.metadata import metadata
+from app.models.application_metadata import metadata
 
 
 llm_usage_events = Table(

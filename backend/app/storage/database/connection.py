@@ -19,10 +19,15 @@ def _create_postgres_engine(database_url: str) -> Engine:
 
 # SQL Agent — PostgreSQL on port 5432
 sql_engine: Engine = _create_postgres_engine(
-    settings.DATABASE_URL,
+    settings.SQL_AGENT_DATABASE_URL,
 )
 
-# Document Agent — PostgreSQL on port 5433
+# Application Runtime — usage analytics and observability
+app_runtime_engine: Engine = _create_postgres_engine(
+    settings.APP_DATABASE_URL,
+)
+
+# Document Agent — PostgreSQL
 document_engine: Engine = _create_postgres_engine(
     settings.DOCUMENT_DATABASE_URL,
 )
@@ -42,3 +47,4 @@ def dispose_database_engines() -> None:
     """Dispose shared PostgreSQL engines during application shutdown."""
     sql_engine.dispose()
     document_engine.dispose()
+    app_runtime_engine.dispose()

@@ -2,8 +2,13 @@ import time
 
 from sqlglot import exp, parse
 from sqlglot.errors import ParseError
+from sqlglot.optimizer.scope import Scope, traverse_scope
 
 from app.core.enums import ValidationStatus
+from app.storage.database.sql_agent_policy import (
+    APPROVED_SQL_AGENT_FUNCTIONS,
+    APPROVED_SQL_AGENT_TABLES,
+)
 
 
 def validate_sql_node(state):
@@ -16,6 +21,7 @@ def validate_sql_node(state):
     - No DML, DDL, or administrative operations.
     - SELECT INTO and locking clauses are prohibited.
     - SQL comments are not allowed.
+    - Only approved sample-data tables and safe functions are allowed.
     """
 
     start_time = time.perf_counter()
@@ -97,6 +103,35 @@ def validate_sql_node(state):
             ValidationStatus.INVALID,
             "SQL comments are not allowed.",
         )
+
+    for node in nodes:
+        if isinstance(node, exp.Func):
+            if (
+                isinstance(node, exp.Anonymous)
+                or node.sql_name().upper()
+                not in APPROVED_SQL_AGENT_FUNCTIONS
+            ):
+                return result(
+                    ValidationStatus.INVALID,
+                    "The SQL query contains a disallowed function.",
+                )
+
+    for scope in traverse_scope(statement):
+        for table in scope.tables:
+            source = scope.sources.get(table.alias_or_name)
+
+            if not table.db and not table.catalog and isinstance(source, Scope):
+                continue
+
+            if (
+                table.catalog
+                or table.db.casefold() not in {"", "public"}
+                or table.name.casefold() not in APPROVED_SQL_AGENT_TABLES
+            ):
+                return result(
+                    ValidationStatus.INVALID,
+                    "The SQL query references a non-approved table.",
+                )
 
     return result(ValidationStatus.VALID, "")
 

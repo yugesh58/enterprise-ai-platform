@@ -16,3 +16,11 @@ backups/
 test_document.*
 *.log
 .DS_Store
+# Development backups and review artifacts
+*.bak
+**/*.bak
+*.zip
+**/*.zip
+
+# Test suite is not required in the runtime image
+tests/

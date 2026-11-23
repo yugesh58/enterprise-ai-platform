@@ -11,7 +11,7 @@ from app.ai.providers.usage_analytics import (
 )
 
 
-@patch("app.ai.providers.usage_analytics.sql_engine")
+@patch("app.ai.providers.usage_analytics.app_runtime_engine")
 def test_get_daily_usage_returns_rows(mock_engine):
     expected = [
         {
@@ -44,7 +44,7 @@ def test_get_daily_usage_rejects_invalid_days(days):
         get_daily_usage(days=days)
 
 
-@patch("app.ai.providers.usage_analytics.sql_engine")
+@patch("app.ai.providers.usage_analytics.app_runtime_engine")
 def test_get_request_usage_returns_rows(mock_engine):
     expected = [
         {

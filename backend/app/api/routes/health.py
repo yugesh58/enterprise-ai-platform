@@ -9,6 +9,7 @@ from sqlalchemy import text
 from app.core.metrics import DEPENDENCY_HEALTH
 from app.core.config import settings
 from app.storage.database.connection import (
+    app_runtime_engine,
     document_engine,
     sql_engine,
 )
@@ -25,6 +26,11 @@ def _check_sql_database() -> None:
 
 def _check_document_database() -> None:
     with document_engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+
+
+def _check_app_runtime_database() -> None:
+    with app_runtime_engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 
 
@@ -63,6 +69,7 @@ def readiness() -> JSONResponse:
     checks = {
         "sql_database": _check_sql_database,
         "document_database": _check_document_database,
+        "app_runtime_database": _check_app_runtime_database,
         "redis": _check_redis,
         "qdrant": _check_qdrant,
     }

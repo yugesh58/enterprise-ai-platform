@@ -68,6 +68,7 @@ async def chat(request: ChatRequest):
         "conversation_id": conversation_id,
         "document_id": request.document_id,
         "top_k": request.top_k,
+        "memory_managed_by_api": True,
     },
     )
 

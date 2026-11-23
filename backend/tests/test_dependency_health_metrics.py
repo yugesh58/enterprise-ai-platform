@@ -11,6 +11,7 @@ client = TestClient(app)
 def test_readiness_updates_dependency_health_metrics(monkeypatch):
     monkeypatch.setattr(health, "_check_sql_database", lambda: None)
     monkeypatch.setattr(health, "_check_document_database", lambda: None)
+    monkeypatch.setattr(health, "_check_app_runtime_database", lambda: None)
     monkeypatch.setattr(health, "_check_redis", lambda: None)
     monkeypatch.setattr(health, "_check_qdrant", lambda: None)
 
@@ -38,6 +39,7 @@ def test_readiness_records_unhealthy_dependency(monkeypatch):
 
     monkeypatch.setattr(health, "_check_sql_database", fail)
     monkeypatch.setattr(health, "_check_document_database", lambda: None)
+    monkeypatch.setattr(health, "_check_app_runtime_database", lambda: None)
     monkeypatch.setattr(health, "_check_redis", lambda: None)
     monkeypatch.setattr(health, "_check_qdrant", lambda: None)
 

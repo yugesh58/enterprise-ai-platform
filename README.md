@@ -324,6 +324,32 @@ https://sql-ai-platform.onrender.com/docs
 * Advanced Visualizations
 * Multi-Database Connectivity
 
+## SQL Agent database role setup
+
+The SQL Agent uses `SQL_AGENT_DATABASE_USER` and
+`SQL_AGENT_DATABASE_PASSWORD` in production. Its host, port, and database name
+come from `DATABASE_HOST`, `DATABASE_PORT`, and `DATABASE_NAME`; the document
+and application-runtime database connections remain separately configured.
+Development can temporarily fall back to the legacy `DATABASE_USER` and
+`DATABASE_PASSWORD` settings; all other environments require the explicit
+SQL Agent credentials.
+
+Only the seeded sample tables `customers`, `departments`, `employees`,
+`products`, `projects`, and `sales` are approved for SQL Agent queries. After
+seeding these tables and setting the role credentials in the backend
+environment, run the provisioning script from `backend/`:
+
+```sh
+python -m scripts.provision_sql_agent_db
+```
+
+The script requires the PostgreSQL Docker container and `docker/.env` admin
+configuration. It changes role attributes/defaults and database ACLs only; it
+does not modify table data or schema objects. It revokes database `CREATE` and
+`TEMPORARY` privileges from `PUBLIC` on the SQL Agent database, which affects
+every role using that database. Application migration privileges must
+therefore be granted explicitly.
+
 ---
 
 # 🎯 Key Learnings

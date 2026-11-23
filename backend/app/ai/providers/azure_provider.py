@@ -23,7 +23,7 @@ class AzureProvider(BaseLLMProvider):
             api_key=settings.AZURE_OPENAI_API_KEY,
             azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
             temperature=settings.TEMPERATURE,
-            api_version="2024-02-01",
+            api_version=settings.AZURE_OPENAI_API_VERSION,
             timeout=settings.LLM_TIMEOUT_SECONDS,
             max_retries=settings.LLM_MAX_RETRIES,
         )

@@ -17,3 +17,14 @@ def get_redis_client() -> redis.Redis:
         decode_responses=True,
         password=settings.REDIS_PASSWORD,
     )
+def dispose_redis_client() -> None:
+    """Close the shared Redis client and clear its cache."""
+    if get_redis_client.cache_info().currsize == 0:
+        return
+
+    client = get_redis_client()
+
+    try:
+        client.close()
+    finally:
+        get_redis_client.cache_clear()

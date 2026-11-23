@@ -3,7 +3,7 @@ from typing_extensions import TypedDict
 
 class SQLState(TypedDict):
     conversation_id: str
-
+    memory_managed_by_api: bool
     question: str
     memory: list
 

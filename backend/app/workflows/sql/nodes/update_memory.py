@@ -3,11 +3,13 @@ from app.storage.memory.factory import get_memory_provider
 
 def update_memory_node(state):
     """
-    Store the successful interaction in conversation memory.
+    Store the successful interaction when memory is owned by the SQL workflow.
     """
 
-    memory_provider = get_memory_provider()
+    if state.get("memory_managed_by_api", False):
+        return {}
 
+    memory_provider = get_memory_provider()
     conversation_id = state["conversation_id"]
 
     memory_provider.add_message(

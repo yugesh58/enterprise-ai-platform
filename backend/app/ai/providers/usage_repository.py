@@ -7,7 +7,7 @@ from sqlalchemy import insert
 
 from app.core.request_context import request_id_var
 from app.models.llm_usage_event import llm_usage_events
-from app.storage.database.connection import sql_engine
+from app.storage.database.connection import app_runtime_engine
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def persist_usage_event(
     }
 
     try:
-        with sql_engine.begin() as connection:
+        with app_runtime_engine.begin() as connection:
             connection.execute(insert(llm_usage_events).values(**event))
     except Exception:
         # Observability must never break the model response.

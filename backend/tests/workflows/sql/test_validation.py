@@ -1,3 +1,5 @@
+import pytest
+
 from app.core.enums import ValidationStatus
 from app.workflows.sql.nodes.validate_sql import (
     validate_sql_node,
@@ -41,6 +43,34 @@ def test_valid_with_query():
     assert result["validation_status"] == ValidationStatus.VALID
 
 
+def test_valid_select_from_approved_sample_tables_and_safe_functions():
+    result = validate(
+        """
+        SELECT d.department_name, COUNT(*) AS employee_count,
+               ROUND(AVG(e.salary)) AS average_salary
+        FROM public.departments AS d
+        JOIN public.employees AS e
+          ON e.department_id = d.department_id
+        GROUP BY d.department_name
+        """
+    )
+
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
+def test_valid_cte_can_reference_approved_tables():
+    result = validate(
+        """
+        WITH active_sales AS (
+            SELECT amount FROM sales WHERE sale_date >= CURRENT_DATE
+        )
+        SELECT SUM(amount) FROM active_sales
+        """
+    )
+
+    assert result["validation_status"] == ValidationStatus.VALID
+
+
 def test_delete_is_rejected():
     result = validate_sql_node({
         "sql_query": "DELETE FROM employees",
@@ -50,11 +80,25 @@ def test_delete_is_rejected():
     assert result["validation_status"] == ValidationStatus.INVALID
 
 
+def test_insert_is_rejected():
+    result = validate(
+        "INSERT INTO employees (employee_id) VALUES (1)"
+    )
+
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
 def test_update_is_rejected():
     result = validate_sql_node({
         "sql_query": "UPDATE employees SET salary = 0",
         "retry_count": 0,
     })
+
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_alter_is_rejected():
+    result = validate("ALTER TABLE employees ADD COLUMN unsafe TEXT")
 
     assert result["validation_status"] == ValidationStatus.INVALID
 
@@ -187,4 +231,55 @@ def test_semicolon_inside_string_is_allowed():
 
 def test_malformed_sql_is_rejected():
     result = validate("SELECT FROM WHERE")
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+@pytest.mark.parametrize(
+    "table_name",
+    [
+        "llm_usage_events",
+        "application_alembic_version",
+        "documents",
+        "information_schema.tables",
+        "pg_catalog.pg_roles",
+    ],
+)
+def test_non_approved_tables_are_rejected(table_name):
+    result = validate(f"SELECT * FROM {table_name}")
+
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+@pytest.mark.parametrize(
+    "function_call",
+    [
+        "pg_sleep(1)",
+        "pg_read_file('/etc/passwd')",
+        "set_config('statement_timeout', '0', false)",
+        "current_setting('statement_timeout')",
+        "nextval('employee_id_seq')",
+        "setval('employee_id_seq', 1)",
+        "generate_series(1, 1000000)",
+        "CAST('1' AS integer)",
+        "'1'::integer",
+    ],
+)
+def test_dangerous_or_unapproved_functions_are_rejected(function_call):
+    result = validate(f"SELECT {function_call}")
+
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_schema_qualified_functions_are_rejected():
+    result = validate("SELECT public.lower(employee_name) FROM employees")
+
+    assert result["validation_status"] == ValidationStatus.INVALID
+
+
+def test_unapproved_table_inside_cte_is_rejected():
+    result = validate(
+        "WITH safe_name AS (SELECT * FROM llm_usage_events) "
+        "SELECT * FROM safe_name"
+    )
+
     assert result["validation_status"] == ValidationStatus.INVALID

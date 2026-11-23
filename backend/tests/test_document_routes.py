@@ -8,12 +8,13 @@ from fastapi.testclient import TestClient
 from app.api.dependencies.document import (
     get_document_chat_service,
     get_document_indexing_service_factory,
-    get_document_search_service,
+    get_document_hybrid_search_service,
     get_document_service,
 )
 from app.api.dependencies.rate_limit import enforce_rate_limit
 from app.core.config import settings
 from app.main import app
+from app.services.document.retrieval_models import RetrievalResult
 
 
 @pytest.fixture
@@ -184,17 +185,32 @@ def test_search_documents_passes_request_to_service(
     search_service,
 ):
     document_id = str(uuid4())
+    retrieval_result = RetrievalResult(
+        chunk_id="chunk-123",
+        document_id=document_id,
+        text="Enterprise AI uses a Document Agent.",
+        source="guide.pdf",
+        page_number=1,
+        chunk_index=0,
+        score=0.031,
+        retrieval_type="hybrid",
+    )
     expected_results = [
         {
-            "text": "Enterprise AI uses a Document Agent.",
-            "score": 0.92,
-            "source": "guide.pdf",
-            "page_number": 1,
+            "id": "chunk-123",
+            "score": 0.031,
+            "payload": {
+                "document_id": document_id,
+                "text": "Enterprise AI uses a Document Agent.",
+                "source": "guide.pdf",
+                "page_number": 1,
+                "chunk_index": 0,
+            },
         }
     ]
-    search_service.search.return_value = expected_results
+    search_service.search.return_value = [retrieval_result]
 
-    app.dependency_overrides[get_document_search_service] = (
+    app.dependency_overrides[get_document_hybrid_search_service] = (
         lambda: search_service
     )
 

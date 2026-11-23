@@ -67,3 +67,15 @@ def test_authentication_can_be_disabled_explicitly(monkeypatch):
     response = client.get("/protected")
 
     assert response.status_code == 200
+
+def test_production_authentication_cannot_be_disabled(monkeypatch):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "API_AUTH_ENABLED", False)
+    monkeypatch.setattr(settings, "API_KEY", "test-secret")
+
+    response = client.get("/protected")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "API authentication is disabled in production."
+    )

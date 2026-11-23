@@ -19,6 +19,7 @@ def test_readiness_returns_200_when_all_dependencies_are_healthy():
     with (
         patch("app.api.routes.health._check_sql_database"),
         patch("app.api.routes.health._check_document_database"),
+        patch("app.api.routes.health._check_app_runtime_database"),
         patch("app.api.routes.health._check_redis"),
         patch("app.api.routes.health._check_qdrant"),
     ):
@@ -30,6 +31,7 @@ def test_readiness_returns_200_when_all_dependencies_are_healthy():
         "dependencies": {
             "sql_database": "ok",
             "document_database": "ok",
+            "app_runtime_database": "ok",
             "redis": "ok",
             "qdrant": "ok",
         },
@@ -40,6 +42,7 @@ def test_readiness_returns_503_when_a_dependency_fails():
     with (
         patch("app.api.routes.health._check_sql_database"),
         patch("app.api.routes.health._check_document_database"),
+        patch("app.api.routes.health._check_app_runtime_database"),
         patch(
             "app.api.routes.health._check_redis",
             side_effect=RuntimeError("Redis unavailable"),

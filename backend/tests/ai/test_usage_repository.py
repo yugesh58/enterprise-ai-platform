@@ -32,7 +32,7 @@ def test_persist_usage_event_includes_request_id(monkeypatch):
     mock_engine.begin.return_value.__enter__.return_value = mock_connection
     mock_connection.execute.return_value = None
 
-    monkeypatch.setattr(usage_repository, "sql_engine", mock_engine)
+    monkeypatch.setattr(usage_repository, "app_runtime_engine", mock_engine)
 
     token = request_id_var.set(expected_request_id)
     try:

@@ -1,3 +1,4 @@
+
 import secrets
 
 from fastapi import HTTPException, Security, status
@@ -15,10 +16,18 @@ api_key_header = APIKeyHeader(
 def require_api_key(
     api_key: str | None = Security(api_key_header),
 ) -> None:
-    """Validate the API key for protected endpoints."""
+    """Validate API authentication, failing closed in production."""
+
+    is_production = settings.ENVIRONMENT.lower() == "production"
+
+    if not settings.API_AUTH_ENABLED and not is_production:
+        return
 
     if not settings.API_AUTH_ENABLED:
-        return
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="API authentication is disabled in production.",
+        )
 
     if not settings.API_KEY:
         raise HTTPException(

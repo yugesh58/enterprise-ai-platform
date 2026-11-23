@@ -26,11 +26,15 @@ class SQLAgent(BaseAgent):
             graph_response = sql_graph.invoke(
                 {
                     "conversation_id": conversation_id,
+                    "memory_managed_by_api": request.attributes.get(
+                    "memory_managed_by_api",
+                        False,
+                    ),
                     "question": request.question,
                     "context": request.context,
                     "retry_count": 0,
                 }
-            )
+)
 
             total_latency_ms = round(
                 (time.perf_counter() - start_time) * 1000,

@@ -14,7 +14,7 @@ from fastapi import (
 from app.api.dependencies.document import (
     get_document_chat_service,
     get_document_indexing_service_factory,
-    get_document_search_service,
+    get_document_hybrid_search_service,
     get_document_service,
 )
 from app.api.dependencies.rate_limit import enforce_rate_limit
@@ -27,8 +27,8 @@ from app.services.document.document_chat_service import DocumentChatService
 from app.services.document.document_indexing_service import (
     DocumentIndexingService,
 )
-from app.services.document.document_search_service import (
-    DocumentSearchService,
+from app.services.document.document_hybrid_search_service import (
+    DocumentHybridSearchService,
 )
 from app.services.document.document_service import DocumentService
 
@@ -159,8 +159,8 @@ async def upload_document(
 @router.post("/search")
 def search_documents(
     request: SearchRequest,
-    search_service: DocumentSearchService = Depends(
-        get_document_search_service
+    search_service: DocumentHybridSearchService = Depends(
+        get_document_hybrid_search_service
     ),
 ):
     results = search_service.search(
@@ -171,7 +171,20 @@ def search_documents(
 
     return {
         "query": request.query,
-        "results": results,
+        "results": [
+            {
+                "id": result.chunk_id,
+                "score": result.score,
+                "payload": {
+                    "document_id": result.document_id,
+                    "text": result.text,
+                    "source": result.source,
+                    "page_number": result.page_number,
+                    "chunk_index": result.chunk_index,
+                },
+            }
+            for result in results
+        ],
     }
 
 

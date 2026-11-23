@@ -7,6 +7,7 @@ from sqlalchemy.engine import Engine
 from app.core.config import settings
 from app.storage.database.base import DatabaseProvider
 from app.storage.database.connection import sql_engine
+from app.storage.database.sql_agent_policy import APPROVED_SQL_AGENT_TABLES
 
 
 class PostgreSQLProvider(DatabaseProvider):
@@ -76,10 +77,13 @@ class PostgreSQLProvider(DatabaseProvider):
         inspector = inspect(self._engine)
         schema: dict[str, Any] = {}
 
-        for table in inspector.get_table_names():
+        for table in inspector.get_table_names(schema="public"):
+            if table not in APPROVED_SQL_AGENT_TABLES:
+                continue
+
             columns = []
 
-            for column in inspector.get_columns(table):
+            for column in inspector.get_columns(table, schema="public"):
                 columns.append(
                     {
                         "name": column["name"],
@@ -91,9 +95,15 @@ class PostgreSQLProvider(DatabaseProvider):
 
             schema[table] = {
                 "columns": columns,
-                "primary_key": inspector.get_pk_constraint(table),
-                "foreign_keys": inspector.get_foreign_keys(table),
-                "indexes": inspector.get_indexes(table),
+                "primary_key": inspector.get_pk_constraint(
+                    table,
+                    schema="public",
+                ),
+                "foreign_keys": inspector.get_foreign_keys(
+                    table,
+                    schema="public",
+                ),
+                "indexes": inspector.get_indexes(table, schema="public"),
             }
 
         return schema

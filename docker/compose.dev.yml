@@ -49,6 +49,8 @@ services:
 
     environment:
       DATABASE_HOST: postgres
+      APP_DATABASE_HOST: postgres
+      APP_DATABASE_PORT: 5432
       DATABASE_PORT: 5432
 
       DOCUMENT_DATABASE_HOST: postgres
@@ -61,6 +63,9 @@ services:
       QDRANT_HOST: qdrant
       QDRANT_PORT: 6333
       QDRANT_API_KEY: ${QDRANT_API_KEY}
+
+    volumes:
+      - uploads_data:/app/uploads
 
     ports:
       - "127.0.0.1:8000:8000"
@@ -216,6 +221,9 @@ services:
       - enterprise-ai-network
 
 volumes:
+  uploads_data:
+    external: true
+    name: uploads_data
   postgres_data:
   redis_data:
   qdrant_data:

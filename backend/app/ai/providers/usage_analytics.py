@@ -1,7 +1,7 @@
 
 from sqlalchemy import text
 
-from app.storage.database.connection import sql_engine
+from app.storage.database.connection import app_runtime_engine
 
 
 def get_request_usage(request_id: str) -> list[dict]:
@@ -31,7 +31,7 @@ def get_request_usage(request_id: str) -> list[dict]:
         ORDER BY total_estimated_cost_usd DESC
     """)
 
-    with sql_engine.connect() as connection:
+    with app_runtime_engine.connect() as connection:
         rows = connection.execute(
             query,
             {"request_id": request_id},
@@ -67,7 +67,7 @@ def get_daily_usage(days: int = 7) -> list[dict]:
         ORDER BY usage_date DESC, total_estimated_cost_usd DESC
     """)
 
-    with sql_engine.connect() as connection:
+    with app_runtime_engine.connect() as connection:
         rows = connection.execute(
             query,
             {"days": days},

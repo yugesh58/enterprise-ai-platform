@@ -34,6 +34,7 @@ def test_chat_passes_conversation_id_to_agent(
     agent_request = mock_dispatch.call_args.args[1]
 
     assert agent_request.attributes["conversation_id"] == "conversation-123"
+    assert agent_request.attributes["memory_managed_by_api"] is True
     assert agent_request.context.conversation_id == "conversation-123"
     assert agent_request.context.selected_agent == "sql"
 

@@ -240,3 +240,35 @@ def test_union_query_is_wrapped(monkeypatch):
 
     assert "UNION" in captured["query"]
     assert "LIMIT" in captured["query"]
+
+
+def test_normal_sample_query_passes_validation_and_executes(monkeypatch):
+    from app.core.enums import ValidationStatus
+    from app.workflows.sql.nodes.validate_sql import validate_sql_node
+
+    query = "SELECT COUNT(*) AS employee_count FROM employees"
+    expected_rows = [{"employee_count": 5}]
+
+    class FakeDatabase:
+        def fetch_all(self, executed_query):
+            assert "FROM employees" in executed_query
+            assert "LIMIT" in executed_query
+            return expected_rows
+
+    monkeypatch.setattr(
+        query_executor.DatabaseFactory,
+        "create",
+        lambda _: FakeDatabase(),
+    )
+
+    validation = validate_sql_node(
+        {
+            "sql_query": query,
+            "retry_count": 0,
+        }
+    )
+    assert validation["validation_status"] == ValidationStatus.VALID
+
+    execution = query_executor.run_query(query)
+    assert execution["result"] == expected_rows
+    assert execution["execution_error"] == ""
