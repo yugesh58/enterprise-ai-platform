@@ -293,7 +293,16 @@ class Settings(BaseSettings):
                 "Production APP_DATABASE_PASSWORD must contain "
                 "at least 32 characters."
             )
+        if not self.DOCUMENT_DATABASE_USER:
+            raise ValueError(
+                "Production requires DOCUMENT_DATABASE_USER."
+            )
 
+        if len(self.DOCUMENT_DATABASE_PASSWORD) < 32:
+            raise ValueError(
+                "Production DOCUMENT_DATABASE_PASSWORD must contain "
+                "at least 32 characters."
+            )
         if not self.SQL_AGENT_DATABASE_USER:
             raise ValueError(
                 "Production requires SQL_AGENT_DATABASE_USER."
@@ -321,6 +330,14 @@ class Settings(BaseSettings):
                 "SQL Agent must use a dedicated database user."
             )
 
+        if self.DOCUMENT_DATABASE_USER in {
+            self.DATABASE_USER,
+            self.APP_DATABASE_USER,
+            self.SQL_AGENT_DATABASE_USER,
+        }:
+            raise ValueError(
+                "Document runtime must use a dedicated database user."
+            )
 
         # Production must use persistent Redis memory.
         if self.MEMORY_PROVIDER.lower() != "redis":

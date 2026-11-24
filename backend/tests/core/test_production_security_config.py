@@ -19,6 +19,8 @@ VALID_PRODUCTION_CONFIG = {
     "QDRANT_API_KEY": "c" * 40,
     "REDIS_PASSWORD": "d" * 40,
     "MEMORY_PROVIDER": "redis",
+    "DOCUMENT_DATABASE_USER": "document_runtime_user",
+    "DOCUMENT_DATABASE_PASSWORD": "f" * 40,
 }
 
 
@@ -70,6 +72,18 @@ def test_valid_production_security_config():
         (
             {"SQL_AGENT_DATABASE_USER": "app_runtime_user"},
             "SQL Agent must use a dedicated database user",
+        ),
+        (
+        {"DOCUMENT_DATABASE_USER": ""},
+            "DOCUMENT_DATABASE_USER",
+        ),
+        (
+            {"DOCUMENT_DATABASE_PASSWORD": "short"},
+            "DOCUMENT_DATABASE_PASSWORD must contain",
+        ),
+        (
+            {"DOCUMENT_DATABASE_USER": "enterprise_user"},
+            "Document runtime must use a dedicated database user",
         ),
     ],
 )
